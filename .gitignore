@@ -34,6 +34,9 @@ eclipse/
 __pycache__/
 *.pyc
 
+# Jars staged for a release upload; the GitHub release holds the real copies
+releases/
+
 # Compiled tool output
 tools/streamcheck/*.class
 

@@ -88,8 +88,10 @@ public class MusicBoxBlock extends BaseEntityBlock {
         if (!level.isClientSide) {
             BlockEntity be = level.getBlockEntity(pos);
             if (be instanceof MusicBoxBlockEntity box && player instanceof ServerPlayer serverPlayer) {
-                NetworkHooks.openScreen(serverPlayer, box,
-                        buf -> MusicBoxMenu.writeOpenData(buf, pos, StationConfig.stations()));
+                NetworkHooks.openScreen(serverPlayer, box, buf -> MusicBoxMenu.writeOpenData(buf, pos,
+                        StationConfig.combined(box.getCustomStations()),
+                        StationConfig.mayAddStations(serverPlayer),
+                        StationConfig.scope() == StationConfig.Scope.GLOBAL));
             }
         }
         return InteractionResult.sidedSuccess(level.isClientSide);

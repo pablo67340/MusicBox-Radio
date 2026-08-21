@@ -45,6 +45,7 @@ public final class MusicBox implements ModInitializer {
         ModItems.register();
         ModBlockEntities.register();
         ModMenus.register();
+        ModNetwork.initServer();
 
         ServerTickEvents.END_SERVER_TICK.register(server -> {
             if (++tickCounter >= HeadphoneSync.TICK_INTERVAL) {

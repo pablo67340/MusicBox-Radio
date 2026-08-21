@@ -9,11 +9,14 @@ import com.musicbox.client.audio.RadioManager;
 import com.musicbox.client.audio.RadioStream;
 import com.musicbox.item.HeadphoneAccess;
 import com.musicbox.menu.MusicBoxMenu;
+import com.musicbox.network.AddStationPayload;
 import com.musicbox.network.PairedBoxPayload;
 import com.musicbox.station.Station;
+import com.musicbox.station.StationConfig;
 import net.minecraft.ChatFormatting;
 import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
+import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
@@ -21,6 +24,7 @@ import net.minecraft.locale.Language;
 import net.minecraft.world.entity.player.Inventory;
 import net.minecraft.world.level.block.entity.BlockEntity;
 import org.jetbrains.annotations.Nullable;
+import org.lwjgl.glfw.GLFW;
 
 public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
 
@@ -45,6 +49,13 @@ public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
     private VolumeSlider volumeSlider;
     private Button pairButton;
     private Button playButton;
+
+    /** While true the station list is covered by the add-a-station form. */
+    private boolean addMode;
+    private EditBox labelBox;
+    private EditBox urlBox;
+    private Button saveButton;
+    private Button cancelButton;
 
     public MusicBoxScreen(MusicBoxMenu menu, Inventory inventory, Component title) {
         super(menu, inventory, title);
@@ -72,7 +83,76 @@ public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
                 Component.translatable("gui.musicboxradio.pair"),
                 button -> sendButton(MusicBoxMenu.BUTTON_PAIR)));
 
+        if (menu.canAddStations()) {
+            addRenderableWidget(new Button(leftPos + 155, topPos + 3, 14, 14,
+                    Component.literal("+"), button -> setAddMode(true)));
+        }
+        initAddForm();
+
         scrollToSelected();
+    }
+
+    private void initAddForm() {
+        labelBox = new EditBox(font, leftPos + 12, topPos + 46, 152, 18,
+                Component.translatable("gui.musicboxradio.add.label"));
+        labelBox.setMaxLength(StationConfig.MAX_LABEL_LENGTH);
+        addRenderableWidget(labelBox);
+
+        urlBox = new EditBox(font, leftPos + 12, topPos + 86, 152, 18,
+                Component.translatable("gui.musicboxradio.add.url"));
+        urlBox.setMaxLength(StationConfig.MAX_URL_LENGTH);
+        addRenderableWidget(urlBox);
+
+        saveButton = addRenderableWidget(new Button(leftPos + 12, topPos + 116, 74, 18,
+                Component.translatable("gui.musicboxradio.add.save"), button -> submitStation()));
+        cancelButton = addRenderableWidget(new Button(leftPos + 90, topPos + 116, 74, 18,
+                Component.translatable("gui.musicboxradio.add.cancel"), button -> setAddMode(false)));
+
+        setAddMode(false);
+    }
+
+    private void setAddMode(boolean value) {
+        addMode = value;
+        labelBox.setVisible(value);
+        urlBox.setVisible(value);
+        saveButton.visible = value;
+        cancelButton.visible = value;
+
+        // The controls behind the form would otherwise still take clicks through it.
+        if (volumeSlider != null) {
+            volumeSlider.visible = !value;
+        }
+        if (playButton != null) {
+            playButton.visible = !value;
+        }
+        if (pairButton != null) {
+            pairButton.visible = !value;
+        }
+
+        if (value) {
+            labelBox.setValue("");
+            urlBox.setValue("");
+            setFocused(labelBox);
+            labelBox.setFocus(true);
+        } else {
+            labelBox.setFocus(false);
+            urlBox.setFocus(false);
+            setFocused(null);
+        }
+    }
+
+    /**
+     * The server has the final say on all of this; the checks here only avoid sending an
+     * obviously empty request and give instant feedback on the two easiest mistakes.
+     */
+    private void submitStation() {
+        String label = labelBox.getValue().trim();
+        String url = urlBox.getValue().trim();
+        if (label.isEmpty() || url.isEmpty()) {
+            return;
+        }
+        ClientNetwork.sendAddStation(new AddStationPayload(menu.pos(), label, url));
+        setAddMode(false);
     }
 
     @Override
@@ -85,6 +165,9 @@ public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
 
     /** The box is server-owned, so anyone else's changes have to show up here as they land. */
     private void refreshFromServer() {
+        if (addMode) {
+            return;
+        }
         MusicBoxBlockEntity box = box();
         if (box != null && volumeSlider != null && !volumeSlider.dragging) {
             volumeSlider.syncTo(box.getVolume());
@@ -118,9 +201,32 @@ public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
         RenderSystem.setShaderTexture(0, TEXTURE);
         blit(poseStack, leftPos, topPos, 0, 0, imageWidth, imageHeight);
 
+        if (addMode) {
+            renderAddForm(poseStack);
+            return;
+        }
+
         renderStationRows(poseStack, mouseX, mouseY);
         renderScrollbar(poseStack);
         renderStatus(poseStack);
+    }
+
+    private void renderAddForm(PoseStack poseStack) {
+        fill(poseStack, leftPos + 7, topPos + 18, leftPos + 169, topPos + 140, 0xF0101010);
+
+        font.draw(poseStack, Component.translatable("gui.musicboxradio.add.title"),
+                leftPos + 12, topPos + 24, 0xFFFFFF);
+        font.draw(poseStack, Component.translatable("gui.musicboxradio.add.label"),
+                leftPos + 12, topPos + 36, 0xA0A0A0);
+        font.draw(poseStack, Component.translatable("gui.musicboxradio.add.url"),
+                leftPos + 12, topPos + 76, 0xA0A0A0);
+
+        Component hint = Component.translatable(menu.isGlobalScope()
+                        ? "gui.musicboxradio.add.hint_global"
+                        : "gui.musicboxradio.add.hint_block")
+                .withStyle(ChatFormatting.DARK_GRAY);
+        font.draw(poseStack, Language.getInstance().getVisualOrder(font.substrByWidth(hint, 152)),
+                leftPos + 12, topPos + 108, 0x808080);
     }
 
     private void renderStationRows(PoseStack poseStack, int mouseX, int mouseY) {
@@ -206,7 +312,40 @@ public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
     }
 
     @Override
+    public boolean keyPressed(int keyCode, int scanCode, int modifiers) {
+        if (addMode) {
+            if (keyCode == GLFW.GLFW_KEY_ESCAPE) {
+                setAddMode(false);
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_TAB) {
+                boolean toUrl = labelBox.isFocused();
+                labelBox.setFocus(!toUrl);
+                urlBox.setFocus(toUrl);
+                setFocused(toUrl ? urlBox : labelBox);
+                return true;
+            }
+            if (keyCode == GLFW.GLFW_KEY_ENTER || keyCode == GLFW.GLFW_KEY_KP_ENTER) {
+                submitStation();
+                return true;
+            }
+            if (labelBox.canConsumeInput() || urlBox.canConsumeInput()) {
+                // Swallow everything else, or the inventory keybind would close the GUI the
+                // moment its letter is typed into a field.
+                if (getFocused() != null) {
+                    getFocused().keyPressed(keyCode, scanCode, modifiers);
+                }
+                return true;
+            }
+        }
+        return super.keyPressed(keyCode, scanCode, modifiers);
+    }
+
+    @Override
     public boolean mouseClicked(double mouseX, double mouseY, int button) {
+        if (addMode) {
+            return super.mouseClicked(mouseX, mouseY, button);
+        }
         if (button == 0) {
             int listX = leftPos + LIST_X;
             int listY = topPos + LIST_Y;
@@ -247,6 +386,9 @@ public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
 
     @Override
     public boolean mouseScrolled(double mouseX, double mouseY, double delta) {
+        if (addMode) {
+            return true;
+        }
         int overflow = Math.max(0, menu.stations().size() - VISIBLE_ROWS);
         if (overflow > 0) {
             scrollRow = clamp(scrollRow - (int) Math.signum(delta), overflow);

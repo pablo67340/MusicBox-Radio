@@ -16,11 +16,27 @@
   "gui.musicboxradio.streaming_disabled": "Streaming disabled in client.json",
   "gui.musicboxradio.no_stations": "No stations configured",
 
+  "gui.musicboxradio.add.title": "Add a station",
+  "gui.musicboxradio.add.label": "Name",
+  "gui.musicboxradio.add.url": "Stream URL",
+  "gui.musicboxradio.add.save": "Add",
+  "gui.musicboxradio.add.cancel": "Cancel",
+  "gui.musicboxradio.add.hint_block": "Saved to this music box only",
+  "gui.musicboxradio.add.hint_global": "Saved for every box on the server",
+
   "tooltip.musicboxradio.headphones_bound": "Paired to the box at %s, %s, %s",
   "tooltip.musicboxradio.headphones_unbound": "Not paired - follows the nearest playing box",
   "tooltip.musicboxradio.headphones_hint": "Sneak + use on a music box to pair",
 
   "message.musicboxradio.headphones_bound": "Headphones paired to %s, %s, %s",
   "message.musicboxradio.headphones_unbound": "Headphones unpaired",
-  "message.musicboxradio.no_headphones": "Wear or hold headphones to pair them"
+  "message.musicboxradio.no_headphones": "Wear or hold headphones to pair them",
+
+  "message.musicboxradio.custom.added": "Added station %s",
+  "message.musicboxradio.custom.no_permission": "You are not allowed to add stations here",
+  "message.musicboxradio.custom.rejected": "That station is already listed, or the list is full",
+  "message.musicboxradio.custom.bad_label": "Give the station a name of 64 characters or fewer",
+  "message.musicboxradio.custom.bad_url": "That does not look like a valid stream URL",
+  "message.musicboxradio.custom.bad_scheme": "Stream URLs must start with http:// or https://",
+  "message.musicboxradio.custom.blocked_domain": "That host is not on this server's allowed list"
 }

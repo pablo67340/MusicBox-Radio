@@ -103,14 +103,12 @@ public final class RadioManager implements ClientHooks.BoxListener {
                 // Already head-locked; a second positional copy would phase against it.
                 continue;
             }
-            double x = pos.getX() + 0.5D;
-            double y = pos.getY() + 0.5D;
-            double z = pos.getZ() + 0.5D;
-            double distance = Math.sqrt(ears.distanceToSqr(x, y, z));
+            Vec3 center = Vec3.atCenterOf(pos);
+            double distance = ears.distanceTo(center);
             float falloff = proximityGain(distance, range);
             if (falloff > 0.0F) {
                 audible.add(new Audible(key, box.getStationUrl(), AlStreamSource.Mode.PROXIMITY,
-                        box.getVolume() * falloff, distance, x, y, z));
+                        box.getVolume() * falloff, distance, center));
             }
         }
 
@@ -146,7 +144,7 @@ public final class RadioManager implements ClientHooks.BoxListener {
             }
 
             float gain = categoryVolume * ClientConfig.masterVolume() * entry.gain;
-            stream.tick(entry.mode, gain, entry.x, entry.y, entry.z);
+            stream.tick(entry.mode, gain, entry.pos, ears);
         }
 
         for (Iterator<Map.Entry<StreamKey, RadioStream>> it = streams.entrySet().iterator(); it.hasNext(); ) {
@@ -178,7 +176,7 @@ public final class RadioManager implements ClientHooks.BoxListener {
             }
             StreamKey key = new StreamKey(feed.dimension(), feed.pos());
             audible.add(new Audible(key, feed.url(), AlStreamSource.Mode.HEADPHONES,
-                    feed.volume(), 0.0D, 0.0D, 0.0D, 0.0D));
+                    feed.volume(), 0.0D, Vec3.ZERO));
             return key;
         }
 
@@ -197,7 +195,7 @@ public final class RadioManager implements ClientHooks.BoxListener {
         }
         StreamKey key = new StreamKey(dimension, nearest.getBlockPos());
         audible.add(new Audible(key, nearest.getStationUrl(), AlStreamSource.Mode.HEADPHONES,
-                nearest.getVolume(), 0.0D, 0.0D, 0.0D, 0.0D));
+                nearest.getVolume(), 0.0D, Vec3.ZERO));
         return key;
     }
 
@@ -225,6 +223,6 @@ public final class RadioManager implements ClientHooks.BoxListener {
     }
 
     private record Audible(StreamKey key, String url, AlStreamSource.Mode mode, float gain,
-                           double distance, double x, double y, double z) {
+                           double distance, Vec3 pos) {
     }
 }

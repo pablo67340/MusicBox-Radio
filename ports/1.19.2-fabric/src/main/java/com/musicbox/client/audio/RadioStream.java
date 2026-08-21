@@ -1,6 +1,8 @@
 package com.musicbox.client.audio;
 
-/** One music box's audio pipeline: a decoding thread feeding a single OpenAL source. */
+import net.minecraft.world.phys.Vec3;
+
+/** One music box's audio pipeline: a decoding thread feeding its OpenAL voices. */
 public final class RadioStream {
 
     private final String url;
@@ -35,11 +37,11 @@ public final class RadioStream {
         return output.isBuffering();
     }
 
-    void tick(AlStreamSource.Mode mode, float gain, double x, double y, double z) {
+    void tick(AlStreamSource.Mode mode, float gain, Vec3 pos, Vec3 listener) {
         if (disposed || isFailed()) {
             return;
         }
-        output.pump(decoder, mode, gain, x, y, z);
+        output.pump(decoder, mode, gain, pos, listener);
     }
 
     void dispose() {

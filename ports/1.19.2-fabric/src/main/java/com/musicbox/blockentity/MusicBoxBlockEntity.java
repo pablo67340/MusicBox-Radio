@@ -9,6 +9,8 @@ import com.musicbox.station.StationConfig;
 import net.fabricmc.fabric.api.screenhandler.v1.ExtendedScreenHandlerFactory;
 import net.minecraft.core.BlockPos;
 import net.minecraft.nbt.CompoundTag;
+import net.minecraft.nbt.ListTag;
+import net.minecraft.nbt.Tag;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.protocol.game.ClientboundBlockEntityDataPacket;
@@ -22,12 +24,19 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import org.jetbrains.annotations.Nullable;
 
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+
 public class MusicBoxBlockEntity extends BlockEntity implements ExtendedScreenHandlerFactory {
 
     private String stationLabel = "";
     private String stationUrl = "";
     private boolean playing;
     private float volume = 1.0F;
+
+    /** Stations added to this box alone, when customStations.scope is BLOCK. */
+    private final List<Station> customStations = new ArrayList<>();
 
     public MusicBoxBlockEntity(BlockPos pos, BlockState state) {
         super(ModBlockEntities.MUSIC_BOX, pos, state);
@@ -47,6 +56,25 @@ public class MusicBoxBlockEntity extends BlockEntity implements ExtendedScreenHa
 
     public float getVolume() {
         return volume;
+    }
+
+    public List<Station> getCustomStations() {
+        return Collections.unmodifiableList(customStations);
+    }
+
+    /** @return false if the box is full or already offers that label */
+    public boolean addCustomStation(Station station) {
+        if (customStations.size() >= StationConfig.maxPerBlock()) {
+            return false;
+        }
+        for (Station existing : StationConfig.combined(customStations)) {
+            if (existing.label().equalsIgnoreCase(station.label())) {
+                return false;
+            }
+        }
+        customStations.add(station);
+        sync();
+        return true;
     }
 
     public void selectStation(Station station) {
@@ -118,6 +146,16 @@ public class MusicBoxBlockEntity extends BlockEntity implements ExtendedScreenHa
         stationUrl = tag.getString("StationUrl");
         playing = tag.getBoolean("Playing");
         volume = tag.contains("Volume") ? tag.getFloat("Volume") : 1.0F;
+
+        customStations.clear();
+        ListTag custom = tag.getList("CustomStations", Tag.TAG_COMPOUND);
+        for (int i = 0; i < custom.size(); i++) {
+            CompoundTag entry = custom.getCompound(i);
+            Station station = Station.of(entry.getString("Label"), entry.getString("Url"));
+            if (station.isValid()) {
+                customStations.add(station);
+            }
+        }
     }
 
     private void writeState(CompoundTag tag) {
@@ -125,6 +163,15 @@ public class MusicBoxBlockEntity extends BlockEntity implements ExtendedScreenHa
         tag.putString("StationUrl", stationUrl);
         tag.putBoolean("Playing", playing);
         tag.putFloat("Volume", volume);
+
+        ListTag custom = new ListTag();
+        for (Station station : customStations) {
+            CompoundTag entry = new CompoundTag();
+            entry.putString("Label", station.label());
+            entry.putString("Url", station.url());
+            custom.add(entry);
+        }
+        tag.put("CustomStations", custom);
     }
 
     @Override
@@ -148,11 +195,17 @@ public class MusicBoxBlockEntity extends BlockEntity implements ExtendedScreenHa
     @Nullable
     @Override
     public AbstractContainerMenu createMenu(int containerId, Inventory inventory, Player player) {
-        return new MusicBoxMenu(containerId, inventory, worldPosition, StationConfig.stations());
+        return new MusicBoxMenu(containerId, inventory, worldPosition,
+                StationConfig.combined(customStations),
+                StationConfig.mayAddStations(player),
+                StationConfig.scope() == StationConfig.Scope.GLOBAL);
     }
 
     @Override
     public void writeScreenOpeningData(ServerPlayer player, FriendlyByteBuf buf) {
-        MusicBoxMenu.writeOpenData(buf, worldPosition, StationConfig.stations());
+        MusicBoxMenu.writeOpenData(buf, worldPosition,
+                StationConfig.combined(customStations),
+                StationConfig.mayAddStations(player),
+                StationConfig.scope() == StationConfig.Scope.GLOBAL);
     }
 }

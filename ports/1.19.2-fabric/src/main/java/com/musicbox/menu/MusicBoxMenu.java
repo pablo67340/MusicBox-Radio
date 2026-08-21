@@ -38,22 +38,29 @@ public class MusicBoxMenu extends AbstractContainerMenu {
 
     private final BlockPos pos;
     private final List<Station> stations;
+    private final boolean canAddStations;
+    private final boolean globalScope;
     private final ContainerLevelAccess access;
 
-    public MusicBoxMenu(int containerId, Inventory inventory, BlockPos pos, List<Station> stations) {
+    public MusicBoxMenu(int containerId, Inventory inventory, BlockPos pos, List<Station> stations,
+                        boolean canAddStations, boolean globalScope) {
         super(ModMenus.MUSIC_BOX, containerId);
         this.pos = pos;
         this.stations = stations;
+        this.canAddStations = canAddStations;
+        this.globalScope = globalScope;
         this.access = inventory.player.level == null
                 ? ContainerLevelAccess.NULL
                 : ContainerLevelAccess.create(inventory.player.level, pos);
     }
 
     public MusicBoxMenu(int containerId, Inventory inventory, FriendlyByteBuf buf) {
-        this(containerId, inventory, buf.readBlockPos(), readStations(buf));
+        this(containerId, inventory, buf.readBlockPos(), readStations(buf),
+                buf.readBoolean(), buf.readBoolean());
     }
 
-    public static void writeOpenData(FriendlyByteBuf buf, BlockPos pos, List<Station> stations) {
+    public static void writeOpenData(FriendlyByteBuf buf, BlockPos pos, List<Station> stations,
+                                     boolean canAddStations, boolean globalScope) {
         buf.writeBlockPos(pos);
         int count = Math.min(stations.size(), MAX_STATION_BUTTONS);
         buf.writeVarInt(count);
@@ -62,6 +69,8 @@ public class MusicBoxMenu extends AbstractContainerMenu {
             buf.writeUtf(station.label(), 128);
             buf.writeUtf(station.url(), 512);
         }
+        buf.writeBoolean(canAddStations);
+        buf.writeBoolean(globalScope);
     }
 
     private static List<Station> readStations(FriendlyByteBuf buf) {
@@ -81,6 +90,23 @@ public class MusicBoxMenu extends AbstractContainerMenu {
         return stations;
     }
 
+    /** Whether this player may use the + button, decided by the server when the menu opened. */
+    public boolean canAddStations() {
+        return canAddStations;
+    }
+
+    /** True when an added station lands in stations.json for everyone rather than on this box. */
+    public boolean isGlobalScope() {
+        return globalScope;
+    }
+
+    /** Lets the screen show a station the server accepted without waiting for a menu reopen. */
+    public void appendStation(Station station) {
+        if (stations.size() < MAX_STATION_BUTTONS) {
+            stations.add(station);
+        }
+    }
+
     public static int volumeButton(float volume) {
         int step = Math.round(Math.max(0.0F, Math.min(1.0F, volume)) * VOLUME_STEPS);
         return VOLUME_BUTTON_BASE + step;
@@ -97,9 +123,10 @@ public class MusicBoxMenu extends AbstractContainerMenu {
         }
 
         if (id >= 0 && id < MAX_STATION_BUTTONS) {
-            // The client's copy of the list is only for display; resolve against the
-            // server config so a spoofed packet cannot make the box play an arbitrary URL.
-            Station station = StationConfig.byIndex(id);
+            // The client's copy of the list is only for display; resolve against the server
+            // config plus this box's own saved additions, so a spoofed packet cannot make the
+            // box play a URL that is not already server-side data.
+            Station station = StationConfig.resolve(id, box.getCustomStations());
             if (station == null) {
                 return false;
             }

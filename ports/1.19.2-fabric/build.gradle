@@ -12,6 +12,17 @@ base {
 
 java.toolchain.languageVersion = JavaLanguageVersion.of(17)
 
+loom {
+    runs {
+        configureEach {
+            // Left to itself the JVM sizes the heap at a quarter of system RAM, which on a
+            // large machine reserves far more than a test client ever touches and leaves it
+            // fighting everything else for native memory.
+            vmArg '-Xmx3G'
+        }
+    }
+}
+
 println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
 
 repositories {

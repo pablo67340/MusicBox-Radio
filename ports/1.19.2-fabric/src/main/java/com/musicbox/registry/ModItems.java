@@ -3,6 +3,7 @@ package com.musicbox.registry;
 import com.musicbox.MusicBox;
 import com.musicbox.item.HeadphoneMaterial;
 import com.musicbox.item.HeadphonesItem;
+import com.musicbox.item.SpeakerItem;
 import net.minecraft.core.Registry;
 import net.minecraft.world.item.BlockItem;
 import net.minecraft.world.item.Item;
@@ -11,6 +12,9 @@ public final class ModItems {
 
     public static final Item MUSIC_BOX = Registry.register(Registry.ITEM, MusicBox.id("music_box"),
             new BlockItem(ModBlocks.MUSIC_BOX, new Item.Properties().tab(MusicBox.TAB)));
+
+    public static final Item SPEAKER = Registry.register(Registry.ITEM, MusicBox.id("speaker"),
+            new SpeakerItem(ModBlocks.SPEAKER, new Item.Properties().tab(MusicBox.TAB)));
 
     public static final Item HEADPHONES = Registry.register(Registry.ITEM, MusicBox.id("headphones"),
             new HeadphonesItem(HeadphoneMaterial.INSTANCE,

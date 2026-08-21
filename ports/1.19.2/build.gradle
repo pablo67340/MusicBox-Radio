@@ -25,6 +25,10 @@ minecraft {
             workingDirectory project.file('run')
             property 'forge.logging.markers', 'REGISTRIES'
             property 'forge.logging.console.level', 'debug'
+            // Left to itself the JVM sizes the heap at a quarter of system RAM, which on a
+            // large machine reserves far more than a test client ever touches and leaves it
+            // fighting everything else for native memory.
+            jvmArgs '-Xmx3G'
             mods { "${mod_id}" { source sourceSets.main } }
         }
         client {}

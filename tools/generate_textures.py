@@ -11,7 +11,7 @@ from pathlib import Path
 
 REPO = Path(__file__).resolve().parent.parent
 PORTS = ["ports/1.19.2", "ports/1.19.2-fabric"]
-ASSETS = "src/main/resources/assets/musicbox/textures"
+ASSETS = "src/main/resources/assets/musicboxradio/textures"
 # Vanilla builds the worn-armour path in the minecraft namespace, so the layer texture has
 # to live there rather than under assets/musicbox.
 VANILLA_ASSETS = "src/main/resources/assets/minecraft/textures"
@@ -218,6 +218,185 @@ def bottom_face():
     return c
 
 
+# --- animated parts ----------------------------------------------------------
+
+# Drawn by the block renderers rather than baked into a face, so these are tinted at
+# runtime. Anything meant to pick up the neon colour is left white or near-white here,
+# because tinting multiplies: black grooves stay black, white labels take the full hue.
+
+VINYL = (16, 16, 20, 255)
+VINYL_GROOVE = (42, 42, 50, 255)
+VINYL_SHEEN = (96, 96, 112, 255)
+
+
+def _streaks(canvas, cx, cy, inner, outer, angles, half_width, colour):
+    """Narrow radial highlights. Without these a spinning disc looks stationary."""
+    for y in range(canvas.h):
+        for x in range(canvas.w):
+            dx = x + 0.5 - cx
+            dy = y + 0.5 - cy
+            distance = math.hypot(dx, dy)
+            if not inner <= distance <= outer:
+                continue
+            theta = math.atan2(dy, dx)
+            for base in angles:
+                offset = abs(((theta - base + math.pi) % (2 * math.pi)) - math.pi)
+                if offset < half_width:
+                    canvas.set(x, y, colour)
+                    break
+
+
+def vinyl_disc():
+    """Spinning record for the music box front. Transparent outside the disc.
+
+    Drawn at 32x32 rather than the usual 16: this is a renderer overlay, not a block
+    face, and concentric grooves alias into squares at block resolution.
+    """
+    c = Canvas(32, 32)
+    cx = cy = 16.0
+
+    c.disc(cx, cy, 15.4, VINYL)
+    c.ring(cx, cy, 15.4, 14.5, (34, 34, 41, 255))
+
+    radius = 13.7
+    while radius > 7.2:
+        c.ring(cx, cy, radius, radius - 0.5, VINYL_GROOVE)
+        radius -= 1.15
+
+    _streaks(c, cx, cy, 6.6, 15.2, (0.55, 0.55 + math.pi), 0.19, VINYL_SHEEN)
+
+    # Label takes the neon tint, spindle hole punches back through to dark.
+    c.disc(cx, cy, 6.3, (255, 255, 255, 255))
+    c.ring(cx, cy, 6.3, 5.5, (202, 202, 212, 255))
+    c.ring(cx, cy, 4.2, 3.8, (226, 226, 234, 255))
+    c.disc(cx, cy, 1.3, VINYL)
+    return c
+
+
+def white_pixel():
+    """Flat source for the tinted quads the equalizer is built from."""
+    c = Canvas(2, 2)
+    c.rect(0, 0, 2, 2, (255, 255, 255, 255))
+    return c
+
+
+# --- speaker -----------------------------------------------------------------
+
+# Black, but not one flat black. Without a few steps of separation the cabinet reads as
+# a hole in the world rather than an object.
+CAB = (28, 28, 33, 255)
+CAB_HI = (62, 62, 71, 255)
+CAB_LO = (11, 11, 14, 255)
+CAB_PANEL = (36, 36, 42, 255)
+GRILLE_WEAVE = (20, 20, 24, 255)
+WELL = (14, 14, 17, 255)
+WELL_DEEP = (7, 7, 9, 255)
+FABRIC = (40, 40, 47, 255)
+FABRIC_HI = (60, 60, 70, 255)
+FABRIC_LO = (22, 22, 27, 255)
+DUSTCAP = (78, 78, 90, 255)
+
+
+def _cabinet(seed):
+    c = Canvas(16, 16)
+    c.rect(0, 0, 16, 16, CAB)
+    # Faint vertical brushing so the black is not a dead flat fill.
+    for x in range(16):
+        if _hash(x, 0, seed) % 5 == 0:
+            for y in range(16):
+                c.set(x, y, CAB_PANEL)
+        if _hash(x, 1, seed) % 7 == 0:
+            for y in range(16):
+                c.set(x, y, GRILLE_WEAVE)
+    c.bevel(0, 0, 16, 16, CAB_HI, CAB_LO)
+    return c
+
+
+def speaker_front():
+    c = Canvas(16, 16)
+    c.rect(0, 0, 16, 16, CAB)
+    # Woven grille cloth over the whole baffle.
+    for y in range(16):
+        for x in range(16):
+            if (x + y) % 2 == 0:
+                c.set(x, y, GRILLE_WEAVE)
+    c.bevel(0, 0, 16, 16, CAB_HI, CAB_LO)
+
+    # Recessed well the cone sits in; the renderer floats the cone above this.
+    c.disc(8.0, 9.5, 5.7, WELL)
+    c.ring(8.0, 9.5, 5.7, 5.1, CAB_HI)
+    c.disc(8.0, 9.5, 4.9, WELL_DEEP)
+
+    # Tweeter and bass port along the top strip.
+    c.disc(3.5, 3.0, 1.7, WELL)
+    c.ring(3.5, 3.0, 1.7, 1.2, CAB_HI)
+    c.rect(11, 2, 14, 4, WELL_DEEP)
+    c.outline(11, 2, 14, 4, CAB_HI)
+    return c
+
+
+def speaker_cone():
+    """Fabric driver drawn by the renderer, pushed out by the bass.
+
+    32x32 for the same reason as the vinyl: it is an overlay, and the surround roll
+    needs more than a pixel to read as a curve.
+    """
+    c = Canvas(32, 32)
+    cx = cy = 16.0
+
+    # Mounting ring, surround roll, cone, then the dust cap.
+    c.disc(cx, cy, 15.4, FABRIC_LO)
+    c.ring(cx, cy, 15.4, 14.0, CAB_HI)
+    c.ring(cx, cy, 14.0, 11.6, FABRIC_HI)
+    c.ring(cx, cy, 12.8, 11.6, FABRIC_LO)
+    c.disc(cx, cy, 11.6, FABRIC)
+
+    radius = 10.6
+    while radius > 5.0:
+        c.ring(cx, cy, radius, radius - 0.45, FABRIC_LO)
+        radius -= 1.9
+
+    _streaks(c, cx, cy, 5.0, 11.4, (2.4,), 0.30, FABRIC_HI)
+
+    c.disc(cx, cy, 4.6, DUSTCAP)
+    c.ring(cx, cy, 4.6, 4.0, FABRIC_LO)
+    _streaks(c, cx, cy, 0.0, 4.0, (2.4,), 0.42, (104, 104, 118, 255))
+    return c
+
+
+def speaker_side():
+    return _cabinet(12)
+
+
+def speaker_top():
+    c = _cabinet(13)
+    c.rect(2, 2, 14, 3, CAB_PANEL)
+    for x, y in ((2, 2), (13, 2), (2, 13), (13, 13)):
+        c.set(x, y, CAB_HI)
+    return c
+
+
+def speaker_bottom():
+    c = _cabinet(14)
+    for x, y in ((2, 2), (13, 2), (2, 13), (13, 13)):
+        c.set(x, y, CAB_LO)
+    return c
+
+
+def speaker_item():
+    c = Canvas(16, 16)
+    c.rect(3, 1, 13, 15, CAB)
+    c.bevel(3, 1, 13, 15, CAB_HI, CAB_LO)
+    # Woofer and tweeter, matching the block front.
+    c.disc(8.0, 9.5, 3.6, WELL)
+    c.ring(8.0, 9.5, 3.6, 3.0, CAB_HI)
+    c.disc(8.0, 9.5, 2.6, FABRIC)
+    c.disc(8.0, 9.5, 1.1, DUSTCAP)
+    c.disc(8.0, 4.0, 1.5, WELL)
+    c.ring(8.0, 4.0, 1.5, 1.0, CAB_HI)
+    return c
+
+
 # --- items -------------------------------------------------------------------
 
 def headphones_item():
@@ -314,7 +493,15 @@ def main():
         "block/music_box_side.png": side_face(),
         "block/music_box_top.png": top_face(),
         "block/music_box_bottom.png": bottom_face(),
+        "block/vinyl.png": vinyl_disc(),
+        "block/white.png": white_pixel(),
+        "block/speaker_front.png": speaker_front(),
+        "block/speaker_side.png": speaker_side(),
+        "block/speaker_top.png": speaker_top(),
+        "block/speaker_bottom.png": speaker_bottom(),
+        "block/speaker_cone.png": speaker_cone(),
         "item/headphones.png": headphones_item(),
+        "item/speaker.png": speaker_item(),
         "gui/music_box.png": gui(),
     }
     vanilla_outputs = {

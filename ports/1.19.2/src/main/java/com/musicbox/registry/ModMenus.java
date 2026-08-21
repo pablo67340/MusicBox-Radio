@@ -2,6 +2,7 @@ package com.musicbox.registry;
 
 import com.musicbox.MusicBox;
 import com.musicbox.menu.MusicBoxMenu;
+import com.musicbox.menu.SpeakerMenu;
 import net.minecraft.world.inventory.MenuType;
 import net.minecraftforge.common.extensions.IForgeMenuType;
 import net.minecraftforge.registries.DeferredRegister;
@@ -15,6 +16,9 @@ public final class ModMenus {
 
     public static final RegistryObject<MenuType<MusicBoxMenu>> MUSIC_BOX =
             MENUS.register("music_box", () -> IForgeMenuType.create(MusicBoxMenu::new));
+
+    public static final RegistryObject<MenuType<SpeakerMenu>> SPEAKER =
+            MENUS.register("speaker", () -> IForgeMenuType.create(SpeakerMenu::new));
 
     private ModMenus() {
     }

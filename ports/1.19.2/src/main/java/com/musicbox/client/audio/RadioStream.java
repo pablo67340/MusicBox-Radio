@@ -2,7 +2,12 @@ package com.musicbox.client.audio;
 
 import net.minecraft.world.phys.Vec3;
 
-/** One music box's audio pipeline: a decoding thread feeding its OpenAL voices. */
+import java.util.List;
+
+/**
+ * One station's audio pipeline: a single decoding thread feeding every place that station
+ * is coming out of, so a box and its speakers stay in step and share one connection.
+ */
 public final class RadioStream {
 
     private final String url;
@@ -37,11 +42,16 @@ public final class RadioStream {
         return output.isBuffering();
     }
 
-    void tick(AlStreamSource.Mode mode, float gain, Vec3 pos, Vec3 listener) {
+    /** Band levels for whatever is coming out of the speakers right now. */
+    public SpectrumFeed feed() {
+        return output.feed();
+    }
+
+    void tick(AlStreamSource.Mode mode, List<AlStreamSource.Target> targets, Vec3 listener) {
         if (disposed || isFailed()) {
             return;
         }
-        output.pump(decoder, mode, gain, pos, listener);
+        output.pump(decoder, mode, targets, listener);
     }
 
     void dispose() {

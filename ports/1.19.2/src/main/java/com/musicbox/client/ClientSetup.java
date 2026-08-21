@@ -3,12 +3,16 @@ package com.musicbox.client;
 import com.musicbox.ClientHooks;
 import com.musicbox.MusicBox;
 import com.musicbox.client.audio.RadioManager;
+import com.musicbox.client.render.MusicBoxRenderer;
+import com.musicbox.client.render.SpeakerRenderer;
+import com.musicbox.registry.ModBlockEntities;
 import com.musicbox.registry.ModBlocks;
 import com.musicbox.registry.ModMenus;
 import net.minecraft.client.gui.screens.MenuScreens;
 import net.minecraft.client.renderer.ItemBlockRenderTypes;
 import net.minecraft.client.renderer.RenderType;
 import net.minecraftforge.api.distmarker.Dist;
+import net.minecraftforge.client.event.EntityRenderersEvent;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
@@ -28,8 +32,16 @@ public final class ClientSetup {
 
         event.enqueueWork(() -> {
             MenuScreens.register(ModMenus.MUSIC_BOX.get(), MusicBoxScreen::new);
+            MenuScreens.register(ModMenus.SPEAKER.get(), SpeakerScreen::new);
             ItemBlockRenderTypes.setRenderLayer(ModBlocks.MUSIC_BOX.get(), RenderType.cutout());
+            ItemBlockRenderTypes.setRenderLayer(ModBlocks.SPEAKER.get(), RenderType.cutout());
         });
+    }
+
+    @SubscribeEvent
+    public static void onRegisterRenderers(EntityRenderersEvent.RegisterRenderers event) {
+        event.registerBlockEntityRenderer(ModBlockEntities.MUSIC_BOX.get(), MusicBoxRenderer::new);
+        event.registerBlockEntityRenderer(ModBlockEntities.SPEAKER.get(), SpeakerRenderer::new);
     }
 
     @Mod.EventBusSubscriber(modid = MusicBox.MOD_ID, bus = Mod.EventBusSubscriber.Bus.FORGE, value = Dist.CLIENT)

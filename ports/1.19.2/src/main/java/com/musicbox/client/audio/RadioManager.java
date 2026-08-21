@@ -2,6 +2,7 @@ package com.musicbox.client.audio;
 
 import com.musicbox.ClientHooks;
 import com.musicbox.blockentity.MusicBoxBlockEntity;
+import com.musicbox.blockentity.SpeakerBlockEntity;
 import com.musicbox.client.ClientConfig;
 import com.musicbox.item.HeadphoneAccess;
 import com.musicbox.network.PairedBoxPayload;
@@ -16,28 +17,40 @@ import org.jetbrains.annotations.Nullable;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.IdentityHashMap;
 import java.util.Iterator;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
 /**
- * Decides, every client tick, which music boxes the local player can hear and how.
+ * Decides, every client tick, which stations the local player can hear and from where.
  * <p>
- * Proximity audio reads the loaded block entities: if you are close enough to hear a box you
- * are close enough to have its chunk. Headphones deliberately outlive render distance, so the
- * paired box is driven from {@link PairedFeed} - state the server pushes to this client - and
- * needs no block entity at all.
+ * Streams are keyed by station URL rather than by block, because a music box and the
+ * speakers paired to it are all one piece of audio coming out of several places. Sharing the
+ * decoder that way is what keeps them in sync with each other and holds the mod to one
+ * connection per station no matter how many blocks are playing it.
+ * <p>
+ * Proximity audio reads the loaded block entities: if you are close enough to hear something
+ * you are close enough to have its chunk. Headphones deliberately outlive render distance, so
+ * the paired box is driven from {@link PairedFeed} - state the server pushes to this client -
+ * and needs no block entity at all.
  */
 public final class RadioManager implements ClientHooks.BoxListener {
 
     private static final RadioManager INSTANCE = new RadioManager();
 
+    /** Ceiling on emitters for one station, so a wall of speakers cannot exhaust AL sources. */
+    private static final int MAX_EMITTERS_PER_STREAM = 6;
+
     private final Set<MusicBoxBlockEntity> boxes = Collections.newSetFromMap(new IdentityHashMap<>());
-    private final Map<StreamKey, RadioStream> streams = new HashMap<>();
+    private final Set<SpeakerBlockEntity> speakers = Collections.newSetFromMap(new IdentityHashMap<>());
+
+    private final Map<String, RadioStream> streams = new HashMap<>();
+    private final Map<StreamKey, RadioStream> byPosition = new HashMap<>();
 
     private RadioManager() {
     }
@@ -56,14 +69,24 @@ public final class RadioManager implements ClientHooks.BoxListener {
         boxes.remove(box);
     }
 
-    /** The stream for a box in the player's current dimension, if one is running. */
+    @Override
+    public void speakerLoaded(SpeakerBlockEntity speaker) {
+        speakers.add(speaker);
+    }
+
+    @Override
+    public void speakerUnloaded(SpeakerBlockEntity speaker) {
+        speakers.remove(speaker);
+    }
+
+    /** The stream feeding a given block, if this client is playing it. Used by the renderers. */
     @Nullable
     public RadioStream streamAt(BlockPos pos) {
         ClientLevel level = Minecraft.getInstance().level;
         if (level == null) {
             return null;
         }
-        return streams.get(new StreamKey(level.dimension().location().toString(), pos));
+        return byPosition.get(new StreamKey(level.dimension().location().toString(), pos));
     }
 
     public void tick() {
@@ -83,88 +106,60 @@ public final class RadioManager implements ClientHooks.BoxListener {
 
         String dimension = level.dimension().location().toString();
         boxes.removeIf(box -> box.isRemoved() || box.getLevel() != level);
-
-        List<MusicBoxBlockEntity> playing = new ArrayList<>();
-        for (MusicBoxBlockEntity box : boxes) {
-            if (box.isPlaying()) {
-                playing.add(box);
-            }
-        }
+        speakers.removeIf(speaker -> speaker.isRemoved() || speaker.getLevel() != level);
 
         Vec3 ears = player.getEyePosition();
-        List<Audible> audible = new ArrayList<>();
-        StreamKey headphones = collectHeadphones(player, dimension, playing, ears, audible);
+        List<Emitter> emitters = new ArrayList<>();
+        String headphoneUrl = collectHeadphones(player, dimension, ears, emitters);
+        collectProximity(dimension, ears, headphoneUrl, emitters);
 
+        playSelected(minecraft, group(emitters, headphoneUrl), ears);
+    }
+
+    /** Everything audible from a position: boxes on their own, and speakers relaying a box. */
+    private void collectProximity(String dimension, Vec3 ears, @Nullable String headphoneUrl,
+                                  List<Emitter> emitters) {
         double range = StationConfig.proximityRange();
-        for (MusicBoxBlockEntity box : playing) {
-            BlockPos pos = box.getBlockPos();
-            StreamKey key = new StreamKey(dimension, pos);
-            if (key.equals(headphones)) {
-                // Already head-locked; a second positional copy would phase against it.
-                continue;
-            }
-            Vec3 center = Vec3.atCenterOf(pos);
-            double distance = ears.distanceTo(center);
-            float falloff = proximityGain(distance, range);
-            if (falloff > 0.0F) {
-                audible.add(new Audible(key, box.getStationUrl(), AlStreamSource.Mode.PROXIMITY,
-                        box.getVolume() * falloff, distance, center));
+
+        for (MusicBoxBlockEntity box : boxes) {
+            if (box.isPlaying()) {
+                add(emitters, dimension, box.getBlockPos(), box.getStationUrl(), box.getVolume(),
+                        ears, range, headphoneUrl);
             }
         }
-
-        // Headphones always win a slot; everything else competes on distance.
-        audible.sort((a, b) -> {
-            if (a.mode != b.mode) {
-                return a.mode == AlStreamSource.Mode.HEADPHONES ? -1 : 1;
-            }
-            return Double.compare(a.distance, b.distance);
-        });
-        int limit = StationConfig.maxConcurrentStreams();
-        if (audible.size() > limit) {
-            audible = audible.subList(0, limit);
-        }
-
-        float categoryVolume = minecraft.options.getSoundSourceVolume(SoundSource.RECORDS);
-        Set<StreamKey> wanted = new HashSet<>();
-
-        for (Audible entry : audible) {
-            wanted.add(entry.key);
-
-            RadioStream stream = streams.get(entry.key);
-            if (stream != null && !stream.url().equals(entry.url)) {
-                stream.dispose();
-                stream = null;
-            }
-            if (stream != null && stream.isFailed()) {
-                continue;
-            }
-            if (stream == null) {
-                stream = new RadioStream(entry.url);
-                streams.put(entry.key, stream);
-            }
-
-            float gain = categoryVolume * ClientConfig.masterVolume() * entry.gain;
-            stream.tick(entry.mode, gain, entry.pos, ears);
-        }
-
-        for (Iterator<Map.Entry<StreamKey, RadioStream>> it = streams.entrySet().iterator(); it.hasNext(); ) {
-            Map.Entry<StreamKey, RadioStream> entry = it.next();
-            if (!wanted.contains(entry.getKey())) {
-                entry.getValue().dispose();
-                it.remove();
+        for (SpeakerBlockEntity speaker : speakers) {
+            if (speaker.isPlaying()) {
+                add(emitters, dimension, speaker.getBlockPos(), speaker.getStationUrl(),
+                        speaker.getVolume(), ears, range, headphoneUrl);
             }
         }
     }
 
+    private void add(List<Emitter> emitters, String dimension, BlockPos pos, String url,
+                     float volume, Vec3 ears, double range, @Nullable String headphoneUrl) {
+        // Headphones replace the room rather than layering over it. One stream can only be
+        // head-locked or positional, so anything on that station stays quiet while they are on.
+        if (url.equals(headphoneUrl)) {
+            return;
+        }
+        Vec3 centre = Vec3.atCenterOf(pos);
+        double distance = ears.distanceTo(centre);
+        float falloff = proximityGain(distance, range);
+        if (falloff <= 0.0F) {
+            return;
+        }
+        emitters.add(new Emitter(new StreamKey(dimension, pos), url, AlStreamSource.Mode.PROXIMITY,
+                volume * falloff, distance, centre));
+    }
+
     /**
-     * Adds the head-locked stereo entry, if any, and returns its key so the proximity pass can
-     * skip that box. A paired box that is switched off means silence, not a fallback: the
-     * player asked for that box specifically.
+     * Adds the head-locked stereo emitter, if any, and returns its station so the proximity
+     * pass can leave it alone. A paired box that is switched off means silence, not a
+     * fallback: the player asked for that box specifically.
      */
     @Nullable
-    private StreamKey collectHeadphones(LocalPlayer player, String dimension,
-                                        List<MusicBoxBlockEntity> playing, Vec3 ears,
-                                        List<Audible> audible) {
+    private String collectHeadphones(LocalPlayer player, String dimension, Vec3 ears,
+                                     List<Emitter> emitters) {
         if (!HeadphoneAccess.isWearing(player)) {
             return null;
         }
@@ -174,29 +169,99 @@ public final class RadioManager implements ClientHooks.BoxListener {
             if (!feed.playing() || feed.url().isEmpty()) {
                 return null;
             }
-            StreamKey key = new StreamKey(feed.dimension(), feed.pos());
-            audible.add(new Audible(key, feed.url(), AlStreamSource.Mode.HEADPHONES,
-                    feed.volume(), 0.0D, Vec3.ZERO));
-            return key;
+            emitters.add(new Emitter(new StreamKey(feed.dimension(), feed.pos()), feed.url(),
+                    AlStreamSource.Mode.HEADPHONES, feed.volume(), 0.0D, Vec3.ZERO));
+            return feed.url();
         }
 
         MusicBoxBlockEntity nearest = null;
         double best = Double.MAX_VALUE;
-        for (MusicBoxBlockEntity box : playing) {
-            BlockPos pos = box.getBlockPos();
-            double d = ears.distanceToSqr(pos.getX() + 0.5D, pos.getY() + 0.5D, pos.getZ() + 0.5D);
-            if (d < best) {
-                best = d;
+        for (MusicBoxBlockEntity box : boxes) {
+            if (!box.isPlaying()) {
+                continue;
+            }
+            double distance = ears.distanceToSqr(Vec3.atCenterOf(box.getBlockPos()));
+            if (distance < best) {
+                best = distance;
                 nearest = box;
             }
         }
         if (nearest == null) {
             return null;
         }
-        StreamKey key = new StreamKey(dimension, nearest.getBlockPos());
-        audible.add(new Audible(key, nearest.getStationUrl(), AlStreamSource.Mode.HEADPHONES,
-                nearest.getVolume(), 0.0D, Vec3.ZERO));
-        return key;
+        emitters.add(new Emitter(new StreamKey(dimension, nearest.getBlockPos()), nearest.getStationUrl(),
+                AlStreamSource.Mode.HEADPHONES, nearest.getVolume(), 0.0D, Vec3.ZERO));
+        return nearest.getStationUrl();
+    }
+
+    /**
+     * Buckets emitters by station and decides which stations make the cut, nearest first with
+     * headphones always kept.
+     */
+    private Map<String, List<Emitter>> group(List<Emitter> emitters, @Nullable String headphoneUrl) {
+        Map<String, List<Emitter>> byUrl = new HashMap<>();
+        for (Emitter emitter : emitters) {
+            byUrl.computeIfAbsent(emitter.url(), key -> new ArrayList<>()).add(emitter);
+        }
+
+        List<String> urls = new ArrayList<>(byUrl.keySet());
+        urls.sort(Comparator.comparingDouble(url -> {
+            if (url.equals(headphoneUrl)) {
+                return -1.0D;
+            }
+            double nearest = Double.MAX_VALUE;
+            for (Emitter emitter : byUrl.get(url)) {
+                nearest = Math.min(nearest, emitter.distance());
+            }
+            return nearest;
+        }));
+
+        int limit = StationConfig.maxConcurrentStreams();
+        Map<String, List<Emitter>> selected = new LinkedHashMap<>();
+        for (String url : urls.subList(0, Math.min(limit, urls.size()))) {
+            List<Emitter> group = byUrl.get(url);
+            group.sort(Comparator.comparingDouble(Emitter::distance));
+            if (group.size() > MAX_EMITTERS_PER_STREAM) {
+                group = group.subList(0, MAX_EMITTERS_PER_STREAM);
+            }
+            selected.put(url, group);
+        }
+        return selected;
+    }
+
+    private void playSelected(Minecraft minecraft, Map<String, List<Emitter>> selected, Vec3 ears) {
+        float categoryVolume = minecraft.options.getSoundSourceVolume(SoundSource.RECORDS);
+        float master = categoryVolume * ClientConfig.masterVolume();
+
+        byPosition.clear();
+        for (Map.Entry<String, List<Emitter>> entry : selected.entrySet()) {
+            String url = entry.getKey();
+            List<Emitter> group = entry.getValue();
+
+            RadioStream stream = streams.get(url);
+            if (stream != null && stream.isFailed()) {
+                continue;
+            }
+            if (stream == null) {
+                stream = new RadioStream(url);
+                streams.put(url, stream);
+            }
+
+            List<AlStreamSource.Target> targets = new ArrayList<>(group.size());
+            for (Emitter emitter : group) {
+                targets.add(new AlStreamSource.Target(emitter.key(), master * emitter.gain(), emitter.pos()));
+                byPosition.put(emitter.key(), stream);
+            }
+            stream.tick(group.get(0).mode(), targets, ears);
+        }
+
+        for (Iterator<Map.Entry<String, RadioStream>> it = streams.entrySet().iterator(); it.hasNext(); ) {
+            Map.Entry<String, RadioStream> entry = it.next();
+            if (!selected.containsKey(entry.getKey())) {
+                entry.getValue().dispose();
+                it.remove();
+            }
+        }
     }
 
     public void stopAll() {
@@ -204,6 +269,7 @@ public final class RadioManager implements ClientHooks.BoxListener {
             stream.dispose();
         }
         streams.clear();
+        byPosition.clear();
     }
 
     private static float proximityGain(double distance, double range) {
@@ -222,7 +288,8 @@ public final class RadioManager implements ClientHooks.BoxListener {
     private record StreamKey(String dimension, BlockPos pos) {
     }
 
-    private record Audible(StreamKey key, String url, AlStreamSource.Mode mode, float gain,
+    /** One block asking to be heard, before stations are bucketed and capped. */
+    private record Emitter(StreamKey key, String url, AlStreamSource.Mode mode, float gain,
                            double distance, Vec3 pos) {
     }
 }

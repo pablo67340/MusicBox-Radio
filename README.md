@@ -4,7 +4,8 @@
 # MusicBox Radio
 
 A Minecraft 1.19.2 mod that adds a **Music Box** block which streams internet radio stations,
-and **Headphones** that let you keep listening anywhere in the world.
+**Speakers** that relay it around a build, and **Headphones** that let you keep listening
+anywhere in the world.
 
 The mod id is `musicboxradio`. There are several unrelated mods called "Music Box", so the
 registry namespace, config folder and jar are all named `musicboxradio` to stay out of their way.
@@ -29,8 +30,9 @@ JDK 17 path; change it to yours, or delete the line if your `JAVA_HOME` is alrea
 ## How it works in game
 
 Place a music box and right-click it to open the station list. Pick a station and it starts
-playing immediately for everyone nearby. The front panel lights up while it is playing, and
-the block emits a comparator signal of 15 so you can wire redstone off it.
+playing immediately for everyone nearby. The record on the front spins while it plays and both
+sides show a spectrum display driven by the audio, and the block emits a comparator signal of
+15 so you can wire redstone off it.
 
 **Proximity is the default.** Nearby players hear the box positioned in the world, panned and
 faded with distance out to `proximityRange` blocks.
@@ -56,6 +58,22 @@ box specifically.
 Pairing is stored on the headphone item, so it survives being taken off, traded or put in a
 chest, and each pair of headphones can be pointed at a different box.
 
+### Speakers
+
+Speakers relay a music box to somewhere else in the world. They are proximity sources at their
+own position, so a few of them will carry a station across a base without the box needing to be
+in the room, and the cone visibly moves with the bass.
+
+- **Pair before placing.** Sneak-right-click a music box holding a speaker to link the stack,
+  then place them. Repeating the gesture on the same box unlinks it.
+- **Re-point one already placed.** Right-click it for a list of every music box within 24
+  blocks, plus its own volume slider and an unpair button.
+
+A speaker follows whatever its box is playing, including station changes, and goes quiet when
+the box is stopped. The link survives the box being far away, in an unloaded chunk, or in
+another dimension, because the server resolves it and copies the answer onto the speaker
+rather than making listeners look the box up.
+
 ### Server authority
 
 The server owns everything that matters: which station is selected, the volume, and whether
@@ -75,10 +93,20 @@ never relayed through the server.
 
 ### Audio quality
 
-Proximity playback is mono, because OpenAL only spatialises mono sources - that is what buys
-the positional panning and distance falloff. Headphone playback is genuine unmodified stereo
-at the station's native sample rate (44.1 kHz for every shipped default), head-locked and
-unattenuated, so nothing is lost.
+OpenAL only spatialises **mono** sources, which is what buys positional panning and distance
+falloff, so a stereo station played in the world gets two mono voices carrying a channel each,
+placed a little over a block apart either side of the block. Distance and placement work as
+normal and the stereo image survives; summing the channels to one voice used to cancel out
+anything panned wide, which is what made synth-heavy stations sound thin.
+
+Headphone playback is genuine unmodified stereo at the station's native sample rate (44.1 kHz
+for every shipped default), head-locked and unattenuated.
+
+One station is decoded once no matter how many blocks are playing it. A box and its speakers
+are emitters on a single shared stream, which is both what keeps them sample-aligned with each
+other - two independent connections would arrive at different points in the broadcast and comb
+filter - and what holds the mod to one connection per station, since plenty of stations cap
+connections per address.
 
 ## Configuring stations
 
@@ -139,6 +167,7 @@ the station host can see connecting players' IP addresses. Only add stations you
 ## Recipes
 
 - **Music Box** - a ring of any planks around a note block, with redstone below it.
+- **Speaker** - a note block and an iron ingot stacked inside a surround of any wool.
 - **Headphones** - an iron ingot on top, leather either side, wool ear cups.
 
 ## Implementation notes
@@ -151,10 +180,16 @@ path:
 - `IcyMetadataStream` de-interleaves `StreamTitle` metadata from the audio bytes.
 - `StreamDecoder` decodes MP3 to PCM with JLayer on a background thread. JLayer is pure Java
   with no transitive dependencies and is bundled into the jar.
-- `AlStreamSource` queues that PCM onto its own OpenAL source inside Minecraft's existing AL
-  context, on the render thread. Distance falloff is computed in Java with the AL rolloff
-  factor set to zero, so the curve does not depend on whichever distance model Minecraft has
-  set globally.
+- `AlStreamSource` queues that PCM onto OpenAL sources inside Minecraft's existing AL context,
+  on the render thread. It owns a set of emitters - the box and any speakers relaying it -
+  which are handed identical chunks and started deliberately, so they stay together. Distance
+  falloff is computed in Java with the AL rolloff factor set to zero, so the curve does not
+  depend on whichever distance model Minecraft has set globally.
+- `Spectrum` runs a 1024-point FFT over each analysis window and folds the bins into five
+  roughly logarithmic bands. `SpectrumFeed` is the part that matters: it holds those bands in a
+  queue advanced by OpenAL's count of finished buffers, so the renderers are always asked about
+  the buffer currently playing rather than the ones queued behind it. Analysing at queue time
+  and drawing immediately would put the meter most of a second ahead of the music.
 
 Every GUI interaction - station, volume, stop, pair - rides on vanilla's container-button
 packet, so nothing the player clicks needs a custom packet. The mod's one channel is

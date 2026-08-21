@@ -2,6 +2,8 @@ package com.musicbox.block;
 
 import com.musicbox.blockentity.MusicBoxBlockEntity;
 import com.musicbox.item.HeadphoneAccess;
+import com.musicbox.item.HeadphonesItem;
+import com.musicbox.item.SpeakerItem;
 import com.musicbox.menu.MusicBoxMenu;
 import com.musicbox.registry.ModBlockEntities;
 import com.musicbox.station.StationConfig;
@@ -11,6 +13,7 @@ import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionHand;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.Item;
 import net.minecraft.world.item.context.BlockPlaceContext;
 import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
@@ -74,6 +77,15 @@ public class MusicBoxBlock extends BaseEntityBlock {
     @Override
     public InteractionResult use(BlockState state, Level level, BlockPos pos, Player player,
                                  InteractionHand hand, net.minecraft.world.phys.BlockHitResult hit) {
+        // Something pairable in hand means the player is pairing it, so step aside and let the
+        // item's own use run. Blocks are offered the click first, so without this the panel
+        // opens over the top and the item never gets a look in; the only way through was to
+        // sneak, which suppresses the block entirely and is not an obvious thing to discover.
+        Item held = player.getItemInHand(hand).getItem();
+        if (held instanceof SpeakerItem || held instanceof HeadphonesItem) {
+            return InteractionResult.PASS;
+        }
+
         // Vanilla only routes a sneaking use here when both hands are empty, which makes this a
         // clean gesture for pairing the headphones you are already wearing.
         if (player.isSecondaryUseActive()) {

@@ -2,6 +2,7 @@
   "itemGroup.musicboxradio": "MusicBox Radio",
 
   "block.musicboxradio.music_box": "Music Box",
+  "block.musicboxradio.speaker": "Speaker",
   "item.musicboxradio.headphones": "Headphones",
 
   "gui.musicboxradio.stop": "Stop",
@@ -24,9 +25,20 @@
   "gui.musicboxradio.add.hint_block": "Saved to this music box only",
   "gui.musicboxradio.add.hint_global": "Saved for every box on the server",
 
+  "gui.musicboxradio.speaker.no_boxes": "No music boxes within 24 blocks",
+  "gui.musicboxradio.speaker.unpaired": "Not paired to a music box",
+  "gui.musicboxradio.speaker.idle": "Paired box is not playing",
+
+  "tooltip.musicboxradio.speaker_bound": "Paired to the box at %s, %s, %s",
+  "tooltip.musicboxradio.speaker_unbound": "Not paired - place it, then use it to pick a box",
+  "tooltip.musicboxradio.speaker_hint": "Use on a music box to pair before placing",
+
+  "message.musicboxradio.speaker.paired": "Speaker paired to %s, %s, %s",
+  "message.musicboxradio.speaker.unpaired": "Speaker unpaired",
+
   "tooltip.musicboxradio.headphones_bound": "Paired to the box at %s, %s, %s",
   "tooltip.musicboxradio.headphones_unbound": "Not paired - follows the nearest playing box",
-  "tooltip.musicboxradio.headphones_hint": "Sneak + use on a music box to pair",
+  "tooltip.musicboxradio.headphones_hint": "Use on a music box to pair",
 
   "message.musicboxradio.headphones_bound": "Headphones paired to %s, %s, %s",
   "message.musicboxradio.headphones_unbound": "Headphones unpaired",

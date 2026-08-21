@@ -14,7 +14,6 @@ import com.musicbox.network.PairedBoxPayload;
 import com.musicbox.station.Station;
 import com.musicbox.station.StationConfig;
 import net.minecraft.ChatFormatting;
-import net.minecraft.client.gui.components.AbstractSliderButton;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
 import net.minecraft.client.gui.screens.inventory.AbstractContainerScreen;
@@ -72,7 +71,9 @@ public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
         MusicBoxBlockEntity box = box();
         float volume = box == null ? 1.0F : box.getVolume();
 
-        volumeSlider = new VolumeSlider(leftPos + 7, topPos + 170, 104, 18, volume);
+        volumeSlider = new VolumeSlider(leftPos + 7, topPos + 170, 104, 18,
+                MusicBoxMenu.VOLUME_STEPS, volume,
+                step -> sendButton(MusicBoxMenu.VOLUME_BUTTON_BASE + step));
         addRenderableWidget(volumeSlider);
 
         playButton = addRenderableWidget(new Button(leftPos + 115, topPos + 170, 54, 18,
@@ -169,7 +170,7 @@ public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
             return;
         }
         MusicBoxBlockEntity box = box();
-        if (box != null && volumeSlider != null && !volumeSlider.dragging) {
+        if (box != null && volumeSlider != null) {
             volumeSlider.syncTo(box.getVolume());
         }
         if (playButton != null) {
@@ -440,51 +441,4 @@ public class MusicBoxScreen extends AbstractContainerScreen<MusicBoxMenu> {
         return be instanceof MusicBoxBlockEntity box ? box : null;
     }
 
-    private final class VolumeSlider extends AbstractSliderButton {
-
-        private boolean dragging;
-
-        VolumeSlider(int x, int y, int width, int height, double initial) {
-            super(x, y, width, height, Component.empty(), initial);
-            updateMessage();
-        }
-
-        /** Adopt a volume someone else set, without fighting the hand currently on the slider. */
-        void syncTo(float target) {
-            double snapped = snap(Math.max(0.0F, Math.min(1.0F, target)));
-            if (Math.abs(snapped - value) > 1.0E-4D) {
-                value = snapped;
-                updateMessage();
-            }
-        }
-
-        @Override
-        protected void updateMessage() {
-            setMessage(Component.translatable("gui.musicboxradio.volume", Math.round(value * 100.0D)));
-        }
-
-        @Override
-        protected void applyValue() {
-            // Snap to the step size the button-id encoding can actually represent.
-            value = snap(value);
-        }
-
-        @Override
-        public void onClick(double mouseX, double mouseY) {
-            dragging = true;
-            super.onClick(mouseX, mouseY);
-        }
-
-        @Override
-        public void onRelease(double mouseX, double mouseY) {
-            // Dragging fires applyValue every frame; only tell the server once, on release.
-            dragging = false;
-            sendButton(MusicBoxMenu.volumeButton((float) value));
-            super.onRelease(mouseX, mouseY);
-        }
-
-        private double snap(double raw) {
-            return Math.round(raw * MusicBoxMenu.VOLUME_STEPS) / (double) MusicBoxMenu.VOLUME_STEPS;
-        }
-    }
 }

@@ -1,0 +1,16 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "WWW",
+    "WNW",
+    "WIW"
+  ],
+  "key": {
+    "W": { "tag": "minecraft:wool" },
+    "N": { "item": "minecraft:note_block" },
+    "I": { "item": "minecraft:iron_ingot" }
+  },
+  "result": {
+    "item": "musicboxradio:speaker"
+  }
+}

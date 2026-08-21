@@ -1,0 +1,17 @@
+* text=auto eol=lf
+
+# Must stay LF or the wrapper breaks on Linux and macOS
+gradlew text eol=lf
+
+# Windows-only scripts
+*.bat text eol=crlf
+*.cmd text eol=crlf
+
+# Never touch binaries
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.jar binary
+*.ogg binary
+*.mp3 binary

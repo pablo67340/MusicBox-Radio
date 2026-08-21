@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "description": "Stream real internet radio in Minecraft. Place a music box, pick a station, and everyone nearby hears the same thing. Pair headphones to keep listening in full stereo anywhere you go.",
+  "authors": [
+    "${mod_authors}"
+  ],
+  "license": "${mod_license}",
+  "icon": "assets/musicboxradio/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.musicbox.MusicBox"
+    ],
+    "client": [
+      "com.musicbox.client.MusicBoxClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "minecraft": "~1.19.2",
+    "java": ">=17",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "trinkets": "*"
+  }
+}

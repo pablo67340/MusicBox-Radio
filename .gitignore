@@ -1,0 +1,43 @@
+# Gradle
+.gradle/
+build/
+!gradle/wrapper/gradle-wrapper.jar
+gradle-app.setting
+
+# Dev environment run directories
+run/
+runs/
+run-data/
+
+# Forge / Fabric generated
+*.log
+logs/
+crash-reports/
+.architectury-transformer/
+remappedSrc/
+fabric-loom-cache/
+
+# IDE
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.settings/
+.classpath
+.project
+bin/
+out/
+eclipse/
+
+# Python tooling
+__pycache__/
+*.pyc
+
+# Compiled tool output
+tools/streamcheck/*.class
+
+# OS
+.DS_Store
+Thumbs.db
+desktop.ini

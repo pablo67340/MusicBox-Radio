@@ -1,0 +1,12 @@
+{
+  "variants": {
+    "facing=north,playing=false": { "model": "musicboxradio:block/music_box" },
+    "facing=east,playing=false": { "model": "musicboxradio:block/music_box", "y": 90 },
+    "facing=south,playing=false": { "model": "musicboxradio:block/music_box", "y": 180 },
+    "facing=west,playing=false": { "model": "musicboxradio:block/music_box", "y": 270 },
+    "facing=north,playing=true": { "model": "musicboxradio:block/music_box_playing" },
+    "facing=east,playing=true": { "model": "musicboxradio:block/music_box_playing", "y": 90 },
+    "facing=south,playing=true": { "model": "musicboxradio:block/music_box_playing", "y": 180 },
+    "facing=west,playing=true": { "model": "musicboxradio:block/music_box_playing", "y": 270 }
+  }
+}

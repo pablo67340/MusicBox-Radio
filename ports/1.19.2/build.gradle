@@ -1,0 +1,120 @@
+plugins {
+    id 'eclipse'
+    id 'idea'
+    id 'maven-publish'
+    id 'net.minecraftforge.gradle' version '[6.0,6.2)'
+}
+
+version = "${minecraft_version}-${mod_version}"
+group = mod_group_id
+
+base {
+    archivesName = mod_id
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(17)
+
+println "Java: ${System.getProperty 'java.version'}, JVM: ${System.getProperty 'java.vm.version'} (${System.getProperty 'java.vendor'}), Arch: ${System.getProperty 'os.arch'}"
+
+minecraft {
+    mappings channel: mapping_channel, version: mapping_version
+    copyIdeResources = true
+
+    runs {
+        configureEach {
+            workingDirectory project.file('run')
+            property 'forge.logging.markers', 'REGISTRIES'
+            property 'forge.logging.console.level', 'debug'
+            mods { "${mod_id}" { source sourceSets.main } }
+        }
+        client {}
+        server { args '--nogui' }
+        data {
+            workingDirectory project.file('run-data')
+            args '--mod', mod_id, '--all', '--output', file('src/generated/resources/'), '--existing', file('src/main/resources/')
+        }
+    }
+}
+
+sourceSets.main.resources { srcDir 'src/generated/resources' }
+
+// Merge resources into the classes dir so dev runs see a single mod directory, otherwise
+// FML discovers the mod twice and the server dies on duplicate package exports.
+sourceSets.main.output.resourcesDir = sourceSets.main.java.classesDirectory
+
+repositories {
+    mavenCentral()
+}
+
+// Plain libraries that get unpacked into the mod's output. JLayer is a pure-Java MP3
+// decoder with no transitive dependencies, so a flat merge is enough - no relocation
+// machinery required, and ForgeGradle's reobf pass leaves non-Minecraft classes alone.
+configurations {
+    shipped
+    implementation.extendsFrom shipped
+}
+
+dependencies {
+    minecraft "net.minecraftforge:forge:${minecraft_version}-${forge_version}"
+
+    shipped "javazoom:jlayer:${jlayer_version}"
+
+    // Curios is an optional bauble slot provider, reached reflectively at runtime -
+    // see BaubleCompat - so there is nothing to compile against here.
+}
+
+tasks.named('processResources', ProcessResources).configure {
+    var replaceProperties = [
+            minecraft_version: minecraft_version, minecraft_version_range: minecraft_version_range,
+            forge_version: forge_version, forge_version_range: forge_version_range,
+            loader_version_range: loader_version_range,
+            mod_id: mod_id, mod_name: mod_name, mod_license: mod_license, mod_version: mod_version,
+            mod_authors: mod_authors, mod_description: mod_description,
+    ]
+    inputs.properties replaceProperties
+
+    filesMatching(['META-INF/mods.toml', 'pack.mcmeta']) {
+        expand replaceProperties + [project: project]
+    }
+}
+
+// Unpack into the mod's own classes directory rather than merging at jar time. Dev runs boot
+// from that directory, and Forge's mod classloader cannot reach a plain classpath library, so
+// merging only in the jar left runClient throwing NoClassDefFoundError on the decoder thread.
+tasks.register('extractShipped', Copy) {
+    dependsOn tasks.named('compileJava')
+    from { configurations.shipped.collect { it.isDirectory() ? it : zipTree(it) } }
+    into sourceSets.main.java.classesDirectory
+    exclude 'META-INF/**', 'module-info.class'
+    duplicatesStrategy = DuplicatesStrategy.EXCLUDE
+}
+
+tasks.named('classes').configure {
+    dependsOn 'extractShipped'
+}
+
+tasks.named('jar', Jar).configure {
+    exclude 'META-INF/*.SF', 'META-INF/*.DSA', 'META-INF/*.RSA'
+
+    manifest {
+        attributes([
+                'Specification-Title'     : mod_id,
+                'Specification-Vendor'    : mod_authors,
+                'Specification-Version'   : '1',
+                'Implementation-Title'    : project.name,
+                'Implementation-Version'  : project.jar.archiveVersion,
+                'Implementation-Vendor'   : mod_authors,
+                'Implementation-Timestamp': new Date().format("yyyy-MM-dd'T'HH:mm:ssZ")
+        ])
+    }
+    finalizedBy 'reobfJar'
+}
+
+publishing {
+    publications { register('mavenJava', MavenPublication) { artifact jar } }
+    repositories { maven { url "file://${project.projectDir}/mcmodsrepo" } }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}

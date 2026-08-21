@@ -1,0 +1,26 @@
+{
+  "itemGroup.musicboxradio.general": "MusicBox Radio",
+
+  "block.musicboxradio.music_box": "Music Box",
+  "item.musicboxradio.headphones": "Headphones",
+
+  "gui.musicboxradio.stop": "Stop",
+  "gui.musicboxradio.play": "Play",
+  "gui.musicboxradio.pair": "Pair",
+  "gui.musicboxradio.unpair": "Unpair",
+  "gui.musicboxradio.volume": "Volume: %s%%",
+  "gui.musicboxradio.buffering": "Buffering...",
+  "gui.musicboxradio.failed": "Stream unavailable",
+  "gui.musicboxradio.stopped": "Stopped",
+  "gui.musicboxradio.out_of_range": "Out of range",
+  "gui.musicboxradio.streaming_disabled": "Streaming disabled in client.json",
+  "gui.musicboxradio.no_stations": "No stations configured",
+
+  "tooltip.musicboxradio.headphones_bound": "Paired to the box at %s, %s, %s",
+  "tooltip.musicboxradio.headphones_unbound": "Not paired - follows the nearest playing box",
+  "tooltip.musicboxradio.headphones_hint": "Sneak + use on a music box to pair",
+
+  "message.musicboxradio.headphones_bound": "Headphones paired to %s, %s, %s",
+  "message.musicboxradio.headphones_unbound": "Headphones unpaired",
+  "message.musicboxradio.no_headphones": "Wear or hold headphones to pair them"
+}

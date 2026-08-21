@@ -1,0 +1,9 @@
+{
+  "parent": "minecraft:block/orientable_with_bottom",
+  "textures": {
+    "top": "musicboxradio:block/music_box_top",
+    "bottom": "musicboxradio:block/music_box_bottom",
+    "front": "musicboxradio:block/music_box_front_on",
+    "side": "musicboxradio:block/music_box_side"
+  }
+}

@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    "WWW",
+    "WNW",
+    "WRW"
+  ],
+  "key": {
+    "W": { "tag": "minecraft:planks" },
+    "N": { "item": "minecraft:note_block" },
+    "R": { "item": "minecraft:redstone" }
+  },
+  "result": {
+    "item": "musicboxradio:music_box",
+    "count": 1
+  }
+}

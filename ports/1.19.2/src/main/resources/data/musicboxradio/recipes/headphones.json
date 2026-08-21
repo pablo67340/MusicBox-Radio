@@ -1,0 +1,17 @@
+{
+  "type": "minecraft:crafting_shaped",
+  "pattern": [
+    " I ",
+    "L L",
+    "W W"
+  ],
+  "key": {
+    "I": { "item": "minecraft:iron_ingot" },
+    "L": { "item": "minecraft:leather" },
+    "W": { "tag": "minecraft:wool" }
+  },
+  "result": {
+    "item": "musicboxradio:headphones",
+    "count": 1
+  }
+}

@@ -25,9 +25,11 @@ ordering="NONE"
 side="BOTH"
 
 # Optional bauble slot provider. Headphones also work in the vanilla helmet slot.
+# Curios for 1.19.2 versions itself as "1.19.2-5.1.6.4", which Maven reads as 1.19.2 with a
+# qualifier, so a bare "[5.1,)" compares 1 against 5 and never matches any real build.
 [[dependencies.${mod_id}]]
 modId="curios"
 mandatory=false
-versionRange="[5.1,)"
+versionRange="[1.19.2-5.1,)"
 ordering="AFTER"
 side="BOTH"

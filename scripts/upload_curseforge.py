@@ -6,11 +6,11 @@ Prerequisites:
   1. pip install -r requirements.txt          (just `requests`)
   2. An API token from https://authors.curseforge.com/account/api-tokens
      -> put it in the CURSEFORGE_TOKEN environment variable (or --token)
-  3. The numeric project ID (shown in the "About Project" box on the project
-     page) -> CURSEFORGE_PROJECT_ID environment variable (or --project-id).
-     MusicBox Radio is 1661840.
-  4. Jars collected in releases/<mod_version>/. Pass --collect to copy them
+  3. Jars collected in releases/<mod_version>/. Pass --collect to copy them
      out of each port's build/libs for you.
+
+The project ID defaults to MusicBox Radio's own (1661840); pass --project-id
+only if you are uploading somewhere else.
 
 Usage, from the project root:
   python scripts/upload_curseforge.py --collect --dry-run
@@ -33,6 +33,10 @@ UPLOAD_API = "https://minecraft.curseforge.com/api"
 
 MOD_ID = "musicboxradio"
 MOD_NAME = "MusicBox Radio"
+
+# Baked in rather than read from CURSEFORGE_PROJECT_ID, because that variable is
+# shared with the other mod projects and the wrong value uploads to the wrong page.
+DEFAULT_PROJECT_ID = "1661840"
 
 # Minecraft version + loader + Java the jar targets. Client + server for all.
 # `loader` must match the CurseForge Modloader tag name exactly. `dir` is the
@@ -128,8 +132,8 @@ def resolve_tags(tags: list, version_ids: dict) -> list:
 
 def main() -> None:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
-    parser.add_argument("--project-id", default=os.environ.get("CURSEFORGE_PROJECT_ID"),
-                        help="numeric CurseForge project id")
+    parser.add_argument("--project-id", default=DEFAULT_PROJECT_ID,
+                        help=f"numeric CurseForge project id (default {DEFAULT_PROJECT_ID})")
     parser.add_argument("--token", default=os.environ.get("CURSEFORGE_TOKEN"),
                         help="CurseForge author API token")
     parser.add_argument("--mod-version", default=None,

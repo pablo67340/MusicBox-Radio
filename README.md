@@ -1,5 +1,6 @@
 <img src="musicboxradio_icon.png" alt="MusicBox Radio" width="128" align="right">
 
+<br />
 # MusicBox Radio
 
 A Minecraft 1.19.2 mod that adds a **Music Box** block which streams internet radio stations,

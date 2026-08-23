@@ -5,6 +5,7 @@ import com.musicbox.item.HeadphonesItem;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.fml.InterModComms;
 import net.minecraftforge.fml.ModList;
 
 import java.lang.reflect.Method;
@@ -33,6 +34,31 @@ public final class BaubleCompat {
     }
 
     private BaubleCompat() {
+    }
+
+    /**
+     * Asks Curios for a head slot during IMC.
+     * <p>
+     * Curios ships no slots of its own; a slot only exists if something asks for one. Plenty
+     * of packs already have a head slot from another mod, but without this the headphones
+     * would have nowhere to go in a pack where nothing else asked, which looks like the
+     * integration is broken. Asking twice is harmless, as Curios merges the requests.
+     */
+    public static void requestHeadSlot() {
+        if (!ModList.get().isLoaded("curios")) {
+            return;
+        }
+        try {
+            Class<?> presets = Class.forName("top.theillusivec4.curios.api.SlotTypePreset");
+            Object head = presets.getField("HEAD").get(null);
+            Object builder = presets.getMethod("getMessageBuilder").invoke(head);
+            Object message = builder.getClass().getMethod("build").invoke(builder);
+            String register = (String) Class.forName("top.theillusivec4.curios.api.SlotTypeMessage")
+                    .getField("REGISTER_TYPE").get(null);
+            InterModComms.sendTo("curios", register, () -> message);
+        } catch (Throwable t) {
+            MusicBox.LOGGER.warn("Could not ask Curios for a head slot: {}", t.toString());
+        }
     }
 
     public static ItemStack findHeadphones(Player player) {

@@ -1,6 +1,7 @@
 package com.musicbox;
 
 import com.mojang.logging.LogUtils;
+import com.musicbox.compat.BaubleCompat;
 import com.musicbox.network.ModNetwork;
 import com.musicbox.registry.ModBlockEntities;
 import com.musicbox.registry.ModBlocks;
@@ -11,6 +12,7 @@ import net.minecraft.world.item.CreativeModeTab;
 import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.common.Mod;
+import net.minecraftforge.fml.event.lifecycle.InterModEnqueueEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
 import net.minecraftforge.fml.loading.FMLPaths;
 import org.slf4j.Logger;
@@ -43,6 +45,12 @@ public final class MusicBox {
 
         ModNetwork.init();
 
+        modBus.addListener(this::enqueueIMC);
+
         LOGGER.info("Music Box loading - tune in.");
+    }
+
+    private void enqueueIMC(InterModEnqueueEvent event) {
+        BaubleCompat.requestHeadSlot();
     }
 }

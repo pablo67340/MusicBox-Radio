@@ -1,9 +1,9 @@
 package com.musicbox.compat;
 
 import com.musicbox.MusicBox;
+import com.mojang.datafixers.util.Pair;
 import com.musicbox.item.HeadphonesItem;
 import net.fabricmc.loader.api.FabricLoader;
-import net.minecraft.util.Tuple;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
@@ -51,12 +51,13 @@ public final class BaubleCompat {
                     return ItemStack.EMPTY;
                 }
             }
-            // Trinkets hands back Tuple<SlotReference, ItemStack>; only the vanilla half matters.
+            // Entries pair a slot with its stack, and only the stack matters here. The pair
+            // type is not worth naming: Trinkets uses DataFixerUpper's Pair, which is easy to
+            // confuse with Minecraft's own Tuple, so the stack is picked out by shape instead.
             if (getAllEquipped.invoke(component) instanceof List<?> equipped) {
                 for (Object entry : equipped) {
-                    if (entry instanceof Tuple<?, ?> tuple
-                            && tuple.getB() instanceof ItemStack stack
-                            && stack.getItem() instanceof HeadphonesItem) {
+                    ItemStack stack = unwrap(entry);
+                    if (stack.getItem() instanceof HeadphonesItem) {
                         return stack;
                     }
                 }
@@ -98,5 +99,23 @@ public final class BaubleCompat {
             }
         }
         return null;
+    }
+
+    /**
+     * Pulls the ItemStack out of one slot-and-stack pair.
+     * <p>
+     * Both halves are checked because Trinkets is not consistent about which way round it
+     * builds these, and generics are erased by the time this sees them anyway.
+     */
+    private static ItemStack unwrap(Object entry) {
+        if (entry instanceof Pair<?, ?> pair) {
+            if (pair.getSecond() instanceof ItemStack second) {
+                return second;
+            }
+            if (pair.getFirst() instanceof ItemStack first) {
+                return first;
+            }
+        }
+        return ItemStack.EMPTY;
     }
 }

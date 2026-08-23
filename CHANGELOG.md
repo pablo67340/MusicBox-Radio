@@ -1,5 +1,30 @@
 # Changelog
 
+## 1.2.1
+
+### Headphones go in the bauble head slot
+
+With Curios installed, headphones can now be worn in the head slot rather than
+taking up the helmet slot. Two things were missing: the item was never added to
+the `curios:head` tag, which is what Curios checks to decide whether an item may
+enter a slot, and nothing ever asked Curios for a head slot in the first place.
+Curios ships no slots of its own, so in a pack where nothing else requested one
+there was no slot to use even with the tag in place. The mod now asks for the
+slot itself, and asking is harmless when another mod has already done so.
+
+Finding the headphones once worn already worked, so that side needed nothing.
+
+On Fabric the same slot is requested from Trinkets as `head/hat`, with the
+matching item tag.
+
+### Trinkets detection actually works now
+
+The Fabric integration read the equipped list as pairs of Minecraft's `Tuple`
+type, but Trinkets returns DataFixerUpper's `Pair`. The two are easy to mistake
+for one another and the check silently never matched, so headphones in a trinket
+slot were treated as not worn at all. Both halves of the pair are now inspected,
+since Trinkets is not consistent about which way round it builds them.
+
 ## 1.2.0
 
 ### The block does something while it plays

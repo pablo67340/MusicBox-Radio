@@ -37,10 +37,13 @@ sides show a spectrum display driven by the audio, and the block emits a compara
 **Proximity is the default.** Nearby players hear the box positioned in the world, panned and
 faded with distance out to `proximityRange` blocks.
 
-**Headphones override that.** Craft headphones, wear them in the helmet slot (or a Curios /
-Trinkets slot if you have those installed), and one box is piped straight to your ears in full
-stereo at any distance - across dimensions included. Unpaired headphones just follow whichever
-box is playing nearest to you.
+**Headphones override that.** Craft headphones, wear them in the helmet slot, and one box is
+piped straight to your ears in full stereo at any distance - across dimensions included.
+Unpaired headphones just follow whichever box is playing nearest to you.
+
+With Curios or Trinkets installed the headphones also go in the head slot, leaving your helmet
+free. The mod asks for that slot itself, so it is there even if nothing else in the pack uses
+one.
 
 ### Pairing headphones to a box
 

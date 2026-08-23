@@ -65,6 +65,10 @@ dependencies {
 
     // Curios is an optional bauble slot provider, reached reflectively at runtime -
     // see BaubleCompat - so there is nothing to compile against here.
+    //
+    // It is deliberately absent from dev runs too: its published jar carries SRG field names
+    // in its accessor mixins, which do not exist under the official mappings a dev run uses,
+    // so adding it takes the client down before it reaches the menu.
 }
 
 tasks.named('processResources', ProcessResources).configure {

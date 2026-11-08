@@ -2,6 +2,21 @@
 
 ## 1.2.1
 
+### Now on Minecraft 1.21.1, for Forge and NeoForge
+
+Two new builds, `ports/1.21.1` for Forge and `ports/1.21.1-neoforge` for
+NeoForge, with everything 1.2.1 has on 1.19.2: stations, speakers, headphone
+pairing, the spinning record and spectrum display, and in-game station adding.
+
+Pairings made on 1.19.2 carry over. Minecraft 1.20.5 moved item NBT into item
+components, and the link is still stored under the same `MusicBoxLink` key, so
+the world upgrade brings paired headphones and speaker stacks across intact.
+
+Curios changed how slots are requested after 1.20.1: mods now ship a datapack
+entry instead of sending a message at startup, so that is how the head slot is
+asked for on 1.21.1. Curios only publishes NeoForge builds for 1.21.1, so on
+Forge the headphones are worn in the helmet slot.
+
 ### Headphones go in the bauble head slot
 
 With Curios installed, headphones can now be worn in the head slot rather than

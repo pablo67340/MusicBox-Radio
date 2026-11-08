@@ -44,6 +44,8 @@ DEFAULT_PROJECT_ID = "1661840"
 PORTS = [
     {"mc": "1.19.2", "loader": "Forge",  "java": "Java 17", "dir": "1.19.2"},
     {"mc": "1.19.2", "loader": "Fabric", "java": "Java 17", "dir": "1.19.2-fabric"},
+    {"mc": "1.21.1", "loader": "Forge",    "java": "Java 21", "dir": "1.21.1"},
+    {"mc": "1.21.1", "loader": "NeoForge", "java": "Java 21", "dir": "1.21.1-neoforge"},
 ]
 
 ENV_TAGS = [("environment", "Client"), ("environment", "Server")]
@@ -142,9 +144,9 @@ def main() -> None:
     parser.add_argument("--release-type", default="release",
                         choices=["release", "beta", "alpha"])
     parser.add_argument("--only", default=None,
-                        help="comma-separated keys (1.19.2 or 1.19.2-fabric). Default: all")
+                        help="comma-separated keys (1.21.1 or 1.21.1-neoforge). Default: all")
     parser.add_argument("--loaders", default=None,
-                        help="comma-separated loaders to include (forge,fabric)")
+                        help="comma-separated loaders to include (forge,fabric,neoforge)")
     parser.add_argument("--collect", action="store_true",
                         help="copy jars out of each port's build/libs first")
     parser.add_argument("--dry-run", action="store_true",

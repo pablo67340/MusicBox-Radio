@@ -3,7 +3,7 @@
 <br />
 # MusicBox Radio
 
-A Minecraft 1.19.2 mod that adds a **Music Box** block which streams internet radio stations,
+A Minecraft 1.19.2 and 1.21.1 mod that adds a **Music Box** block which streams internet radio stations,
 **Speakers** that relay it around a build, and **Headphones** that let you keep listening
 anywhere in the world.
 
@@ -20,12 +20,15 @@ Ports live under `ports/`, each a standalone Gradle project:
 | --- | --- | --- |
 | `ports/1.19.2` | Forge 43.5.2 | `cd ports/1.19.2 && ./gradlew build` |
 | `ports/1.19.2-fabric` | Fabric Loader 0.16.14, Fabric API 0.76.1 | `cd ports/1.19.2-fabric && ./gradlew build` |
+| `ports/1.21.1` | Forge 52.1.16 | `cd ports/1.21.1 && ./gradlew build` |
+| `ports/1.21.1-neoforge` | NeoForge 21.1.200 | `cd ports/1.21.1-neoforge && ./gradlew build` |
 
 > NeoForge has no 1.19.2 build - it forked from Forge at 1.20.1 - so there is no NeoForge
-> port at this version.
+> port at that version.
 
-Both ports need **JDK 17**. Each `gradle.properties` pins `org.gradle.java.home` to a local
-JDK 17 path; change it to yours, or delete the line if your `JAVA_HOME` is already 17.
+The 1.19.2 ports need **JDK 17** and the 1.21.1 ports need **JDK 21**. Each `gradle.properties`
+pins `org.gradle.java.home` to a local JDK path; change it to yours, or delete the line if your
+`JAVA_HOME` is already the right version.
 
 ## How it works in game
 
@@ -43,7 +46,7 @@ Unpaired headphones just follow whichever box is playing nearest to you.
 
 With Curios or Trinkets installed the headphones also go in the head slot, leaving your helmet
 free. The mod asks for that slot itself, so it is there even if nothing else in the pack uses
-one.
+one. On 1.21.1 Curios only exists for NeoForge, so the Forge 1.21.1 build is helmet slot only.
 
 ### Pairing headphones to a box
 

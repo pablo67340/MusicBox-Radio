@@ -96,6 +96,18 @@ fun Project.musicBox(target: MusicBoxTarget, loaderProps: Map<String, String>) {
                 filter { line -> line.replace("\"id\":", "\"item\":") }
             }
         }
+        if (target.atLeast("1.21.2")) {
+            // Ingredients became bare ids, with tags marked by a leading #.
+            filesMatching("data/*/recipe/*.json") {
+                filter { line ->
+                    line.replace(Regex("""\{\s*"tag":\s*"([^"]+)"\s*}""")) { "\"#${it.groupValues[1]}\"" }
+                        .replace(Regex("""\{\s*"item":\s*"([^"]+)"\s*}""")) { "\"${it.groupValues[1]}\"" }
+                }
+            }
+        }
+        // Equipment assets arrived in 1.21.2 and item model definitions in 1.21.4.
+        if (!target.atLeast("1.21.2")) exclude("assets/*/equipment/**")
+        if (!target.atLeast("1.21.4")) exclude("assets/*/items/**")
         eachFile { path = resourcePath(target, path) }
         includeEmptyDirs = false
     }
@@ -121,10 +133,17 @@ fun Project.musicBox(target: MusicBoxTarget, loaderProps: Map<String, String>) {
  */
 private fun resourcePath(target: MusicBoxTarget, path: String): String {
     var result = path
-    if (!target.atLeast("1.20.5") && result == "assets/musicboxradio/textures/models/armor/headphones_layer_1.png") {
-        // Before armor materials were registered, the worn texture was looked up by material
-        // name in the vanilla namespace.
-        result = "assets/minecraft/textures/models/armor/musicboxradio_headphones_layer_1.png"
+    if (result == "assets/musicboxradio/textures/models/armor/headphones_layer_1.png") {
+        result = when {
+            target.atLeast("1.21.2") -> "assets/musicboxradio/textures/entity/equipment/humanoid/headphones.png"
+            target.atLeast("1.20.5") -> result
+            // Before armor materials were registered, the worn texture was looked up by
+            // material name in the vanilla namespace.
+            else -> "assets/minecraft/textures/models/armor/musicboxradio_headphones_layer_1.png"
+        }
+    }
+    if (!target.atLeast("1.21.4")) {
+        result = result.replace(Regex("^assets/([^/]+)/equipment/")) { "assets/${it.groupValues[1]}/models/equipment/" }
     }
     if (!target.atLeast("1.21")) {
         result = result

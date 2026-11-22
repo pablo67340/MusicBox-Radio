@@ -85,7 +85,11 @@ public final class ForgePlatform implements Platform {
                 // and it resolves to the same entry once registration is done.
                 ResourceKey<T> key = ResourceKey.create((ResourceKey) registry, MusicBox.id(name));
                 net.minecraft.core.WritableRegistry<T> writable = (net.minecraft.core.WritableRegistry<T>)
-                        net.minecraft.core.registries.BuiltInRegistries.REGISTRY.get(registry.location());
+                        //? if >=1.21.2 {
+                        net.minecraft.core.registries.BuiltInRegistries.REGISTRY.getValue(registry.location());
+                        //?} else {
+                        /*net.minecraft.core.registries.BuiltInRegistries.REGISTRY.get(registry.location());
+                        *///?}
                 return writable.createRegistrationLookup().getOrThrow(key);
                 //?} else {
                 /*return object.getHolder().orElseThrow();
@@ -111,6 +115,16 @@ public final class ForgePlatform implements Platform {
     }
     *///?}
 
+    @Override
+    public <T extends net.minecraft.world.level.block.entity.BlockEntity> net.minecraft.world.level.block.entity.BlockEntityType<T> blockEntityType(
+            java.util.function.BiFunction<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState, T> factory,
+            net.minecraft.world.level.block.Block block) {
+        //? if >=1.21.2 {
+        return new net.minecraft.world.level.block.entity.BlockEntityType<>(factory::apply, java.util.Set.of(block));
+        //?} else {
+        /*return net.minecraft.world.level.block.entity.BlockEntityType.Builder.of(factory::apply, block).build(null);
+        *///?}
+    }
     @Override
     public <M extends AbstractContainerMenu> Supplier<MenuType<M>> registerMenu(String name, MenuFactory<M> factory) {
         return register(Keys.MENU, name, () -> IForgeMenuType.create(factory::create));

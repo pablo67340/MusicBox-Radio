@@ -53,7 +53,11 @@ public final class FabricPlatform implements Platform {
     @SuppressWarnings("unchecked")
     public <T> RegistryRef<T> register(ResourceKey<? extends Registry<? super T>> registry, String name, Supplier<T> factory) {
         //? if >=1.19.3 {
-        Registry<T> target = (Registry<T>) net.minecraft.core.registries.BuiltInRegistries.REGISTRY.get(registry.location());
+        //? if >=1.21.2 {
+        Registry<T> target = (Registry<T>) net.minecraft.core.registries.BuiltInRegistries.REGISTRY.getValue(registry.location());
+        //?} else {
+        /*Registry<T> target = (Registry<T>) net.minecraft.core.registries.BuiltInRegistries.REGISTRY.get(registry.location());
+        *///?}
         //?} else {
         /*Registry<T> target = (Registry<T>) Registry.REGISTRY.get(registry.location());
         *///?}
@@ -68,7 +72,11 @@ public final class FabricPlatform implements Platform {
 
             @Override
             public Holder<T> holder() {
-                return target.getHolderOrThrow(key);
+                //? if >=1.21.2 {
+                return target.getOrThrow(key);
+                //?} else {
+                /*return target.getHolderOrThrow(key);
+                *///?}
             }
         };
     }
@@ -86,6 +94,12 @@ public final class FabricPlatform implements Platform {
     *///?}
 
 
+    @Override
+    public <T extends net.minecraft.world.level.block.entity.BlockEntity> net.minecraft.world.level.block.entity.BlockEntityType<T> blockEntityType(
+            java.util.function.BiFunction<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState, T> factory,
+            net.minecraft.world.level.block.Block block) {
+        return net.fabricmc.fabric.api.object.builder.v1.block.entity.FabricBlockEntityTypeBuilder.create(factory::apply, block).build();
+    }
     @Override
     public <M extends AbstractContainerMenu> Supplier<MenuType<M>> registerMenu(String name, MenuFactory<M> factory) {
         //? if >=1.20.5 {

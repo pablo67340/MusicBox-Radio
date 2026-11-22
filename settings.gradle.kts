@@ -40,6 +40,7 @@ stonecutter {
         node("1.20.4", "fabric", "neoforge")
         node("1.20.6", "fabric", "forge", "neoforge")
         node("1.21.1", "fabric", "forge", "neoforge")
+        node("1.21.3", "fabric", "forge", "neoforge")
         vcsVersion = "1.21.1-neoforge"
     }
 }

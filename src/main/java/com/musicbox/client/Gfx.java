@@ -1,6 +1,5 @@
 package com.musicbox.client;
 
-import com.mojang.blaze3d.systems.RenderSystem;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.components.Button;
 import net.minecraft.client.gui.components.EditBox;
@@ -39,8 +38,12 @@ public final class Gfx {
 
     /** Draws part of a 256x256 texture. */
     public void blit(ResourceLocation texture, int x, int y, int u, int v, int width, int height) {
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        //? if >=1.21.2 {
+        /*graphics.blit(net.minecraft.client.renderer.RenderType::guiTextured, texture, x, y, u, v, width, height, 256, 256);
+        *///?} else {
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
         graphics.blit(texture, x, y, u, v, width, height);
+        //?}
     }
     //?} else {
     /*private final com.mojang.blaze3d.vertex.PoseStack poseStack;
@@ -66,9 +69,9 @@ public final class Gfx {
     }
 
     public void blit(ResourceLocation texture, int x, int y, int u, int v, int width, int height) {
-        RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexShader);
-        RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
-        RenderSystem.setShaderTexture(0, texture);
+        com.mojang.blaze3d.systems.RenderSystem.setShader(net.minecraft.client.renderer.GameRenderer::getPositionTexShader);
+        com.mojang.blaze3d.systems.RenderSystem.setShaderColor(1.0F, 1.0F, 1.0F, 1.0F);
+        com.mojang.blaze3d.systems.RenderSystem.setShaderTexture(0, texture);
         net.minecraft.client.gui.GuiComponent.blit(poseStack, x, y, u, v, width, height, 256, 256);
     }
     *///?}

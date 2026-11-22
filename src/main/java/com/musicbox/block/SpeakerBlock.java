@@ -4,13 +4,13 @@ import com.musicbox.blockentity.SpeakerBlockEntity;
 import com.musicbox.menu.SpeakerMenu;
 import com.musicbox.platform.Services;
 import com.musicbox.registry.ModBlockEntities;
+import com.musicbox.util.Interactions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -23,7 +23,6 @@ import net.minecraft.world.level.block.entity.BlockEntityTicker;
 import net.minecraft.world.level.block.entity.BlockEntityType;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -33,7 +32,13 @@ public class SpeakerBlock extends BaseEntityBlock {
     public static final com.mojang.serialization.MapCodec<SpeakerBlock> CODEC = simpleCodec(SpeakerBlock::new);
     //?}
 
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    //? if >=1.21.2 {
+    /*public static final net.minecraft.world.level.block.state.properties.EnumProperty<Direction> FACING =
+            HorizontalDirectionalBlock.FACING;
+    *///?} else {
+    public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING =
+            HorizontalDirectionalBlock.FACING;
+    //?}
 
     public SpeakerBlock(Properties properties) {
         super(properties);
@@ -111,7 +116,7 @@ public class SpeakerBlock extends BaseEntityBlock {
                         SpeakerMenu.findNearbyBoxes(level, pos), speaker.getBoundPos(), speaker.getVolume()));
             }
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return Interactions.success(level);
     }
 
     @SuppressWarnings("deprecation")
@@ -120,8 +125,15 @@ public class SpeakerBlock extends BaseEntityBlock {
         return false;
     }
 
-    @Override
-    public boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+    //? if >=1.21.2 {
+    /*@Override
+    protected boolean propagatesSkylightDown(BlockState state) {
         return false;
     }
+    *///?} else {
+    @Override
+    public boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        return false;
+    }
+    //?}
 }

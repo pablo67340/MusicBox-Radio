@@ -26,16 +26,18 @@ public final class ModItems {
     //?}
 
     public static final RegistryRef<Item> MUSIC_BOX = Services.PLATFORM.register(Keys.ITEM, "music_box",
-            () -> new BlockItem(ModBlocks.MUSIC_BOX.get(), properties()));
+            () -> new BlockItem(ModBlocks.MUSIC_BOX.get(), blockProperties("music_box")));
 
     public static final RegistryRef<Item> SPEAKER = Services.PLATFORM.register(Keys.ITEM, "speaker",
-            () -> new SpeakerItem(ModBlocks.SPEAKER.get(), properties()));
+            () -> new SpeakerItem(ModBlocks.SPEAKER.get(), blockProperties("speaker")));
 
     public static final RegistryRef<Item> HEADPHONES = Services.PLATFORM.register(Keys.ITEM, "headphones",
-            //? if >=1.20.5 {
-            () -> new HeadphonesItem(HEADPHONE_MATERIAL.holder(), properties().stacksTo(1)));
+            //? if >=1.21.2 {
+            /*() -> new HeadphonesItem(properties("headphones").stacksTo(1)));
+            *///?} else if >=1.20.5 {
+            () -> new HeadphonesItem(HEADPHONE_MATERIAL.holder(), properties("headphones").stacksTo(1)));
             //?} else {
-            /*() -> new HeadphonesItem(HeadphoneMaterial.INSTANCE, properties().stacksTo(1)));
+            /*() -> new HeadphonesItem(HeadphoneMaterial.INSTANCE, properties("headphones").stacksTo(1)));
             *///?}
 
     //? if >=1.20 {
@@ -58,11 +60,22 @@ public final class ModItems {
     public static void init() {
     }
 
-    private static Item.Properties properties() {
-        //? if >=1.20 {
+    private static Item.Properties properties(String name) {
+        //? if >=1.21.2 {
+        /*return new Item.Properties().setId(net.minecraft.resources.ResourceKey.create(Keys.ITEM, MusicBox.id(name)));
+        *///?} else if >=1.20 {
         return new Item.Properties();
         //?} else {
         /*return new Item.Properties().tab(TAB);
         *///?}
+    }
+
+    /** Block items keep the block's name, so one translation covers both. */
+    private static Item.Properties blockProperties(String name) {
+        //? if >=1.21.2 {
+        /*return properties(name).useBlockDescriptionPrefix();
+        *///?} else {
+        return properties(name);
+        //?}
     }
 }

@@ -1,14 +1,13 @@
 package com.musicbox.item;
 
 import com.musicbox.blockentity.MusicBoxBlockEntity;
+import com.musicbox.util.Interactions;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.world.InteractionResult;
 import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ArmorItem;
-import net.minecraft.world.item.ArmorMaterial;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.TooltipFlag;
 import net.minecraft.world.item.context.UseOnContext;
@@ -23,18 +22,26 @@ import java.util.List;
  * listener in stereo, anywhere in the world, in whatever dimension. Unpaired headphones just
  * follow whichever box is playing nearest.
  */
-public class HeadphonesItem extends ArmorItem {
+//? if >=1.21.2 {
+/*public class HeadphonesItem extends net.minecraft.world.item.Item {
+*///?} else {
+public class HeadphonesItem extends net.minecraft.world.item.ArmorItem {
+//?}
 
-    //? if >=1.20.5 {
-    public HeadphonesItem(net.minecraft.core.Holder<ArmorMaterial> material, Properties properties) {
+    //? if >=1.21.2 {
+    /*public HeadphonesItem(Properties properties) {
+        super(properties.component(net.minecraft.core.component.DataComponents.EQUIPPABLE, HeadphoneMaterial.equippable()));
+    }
+    *///?} else if >=1.20.5 {
+    public HeadphonesItem(net.minecraft.core.Holder<net.minecraft.world.item.ArmorMaterial> material, Properties properties) {
         super(material, Type.HELMET, properties);
     }
     //?} else if >=1.19.4 {
-    /*public HeadphonesItem(ArmorMaterial material, Properties properties) {
+    /*public HeadphonesItem(net.minecraft.world.item.ArmorMaterial material, Properties properties) {
         super(material, Type.HELMET, properties);
     }
     *///?} else {
-    /*public HeadphonesItem(ArmorMaterial material, Properties properties) {
+    /*public HeadphonesItem(net.minecraft.world.item.ArmorMaterial material, Properties properties) {
         super(material, net.minecraft.world.entity.EquipmentSlot.HEAD, properties);
     }
     *///?}
@@ -52,7 +59,7 @@ public class HeadphonesItem extends ArmorItem {
             HeadphoneAccess.announce(player,
                     HeadphoneAccess.togglePairing(player, level.dimension().location(), pos), pos);
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return Interactions.success(level);
     }
 
     public static void bind(ItemStack stack, ResourceLocation dimension, BlockPos pos) {

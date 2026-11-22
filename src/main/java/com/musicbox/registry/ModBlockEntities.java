@@ -10,11 +10,11 @@ public final class ModBlockEntities {
 
     public static final RegistryRef<BlockEntityType<MusicBoxBlockEntity>> MUSIC_BOX =
             Services.PLATFORM.register(Keys.BLOCK_ENTITY_TYPE, "music_box",
-                    () -> BlockEntityType.Builder.of(MusicBoxBlockEntity::new, ModBlocks.MUSIC_BOX.get()).build(null));
+                    () -> Services.PLATFORM.blockEntityType(MusicBoxBlockEntity::new, ModBlocks.MUSIC_BOX.get()));
 
     public static final RegistryRef<BlockEntityType<SpeakerBlockEntity>> SPEAKER =
             Services.PLATFORM.register(Keys.BLOCK_ENTITY_TYPE, "speaker",
-                    () -> BlockEntityType.Builder.of(SpeakerBlockEntity::new, ModBlocks.SPEAKER.get()).build(null));
+                    () -> Services.PLATFORM.blockEntityType(SpeakerBlockEntity::new, ModBlocks.SPEAKER.get()));
 
     private ModBlockEntities() {
     }

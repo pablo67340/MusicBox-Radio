@@ -94,6 +94,16 @@ public final class NeoForgePlatform implements Platform {
     }
 
     @Override
+    public <T extends net.minecraft.world.level.block.entity.BlockEntity> net.minecraft.world.level.block.entity.BlockEntityType<T> blockEntityType(
+            java.util.function.BiFunction<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState, T> factory,
+            net.minecraft.world.level.block.Block block) {
+        //? if >=1.21.2 {
+        /*return new net.minecraft.world.level.block.entity.BlockEntityType<>(factory::apply, java.util.Set.of(block));
+        *///?} else {
+        return net.minecraft.world.level.block.entity.BlockEntityType.Builder.of(factory::apply, block).build(null);
+        //?}
+    }
+    @Override
     public <M extends AbstractContainerMenu> Supplier<MenuType<M>> registerMenu(String name, MenuFactory<M> factory) {
         return register(Keys.MENU, name, () -> IMenuTypeExtension.create(factory::create));
     }

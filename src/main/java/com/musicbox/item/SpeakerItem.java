@@ -2,6 +2,7 @@ package com.musicbox.item;
 
 import com.musicbox.blockentity.MusicBoxBlockEntity;
 import com.musicbox.blockentity.SpeakerBlockEntity;
+import com.musicbox.util.Interactions;
 import net.minecraft.ChatFormatting;
 import net.minecraft.core.BlockPos;
 import net.minecraft.network.chat.Component;
@@ -57,7 +58,7 @@ public class SpeakerItem extends BlockItem {
                                     pos.getX(), pos.getY(), pos.getZ()), true);
                 }
             }
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            return Interactions.success(level);
         }
 
         return super.useOn(context);

@@ -39,6 +39,11 @@ public interface Platform {
     /*net.minecraft.world.item.CreativeModeTab createTab(String name, Supplier<net.minecraft.world.item.ItemStack> icon);
     *///?}
 
+    /** A block entity type for one block; called from inside a registration factory. */
+    <T extends net.minecraft.world.level.block.entity.BlockEntity> net.minecraft.world.level.block.entity.BlockEntityType<T> blockEntityType(
+            java.util.function.BiFunction<net.minecraft.core.BlockPos, net.minecraft.world.level.block.state.BlockState, T> factory,
+            net.minecraft.world.level.block.Block block);
+
     /** A menu type whose client side is built from data the server writes when opening it. */
     <M extends AbstractContainerMenu> Supplier<MenuType<M>> registerMenu(String name, MenuFactory<M> factory);
 

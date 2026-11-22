@@ -6,6 +6,7 @@ import com.musicbox.item.HeadphonesItem;
 import com.musicbox.item.SpeakerItem;
 import com.musicbox.network.ModNetwork;
 import com.musicbox.util.Levels;
+import com.musicbox.util.Interactions;
 import net.minecraft.core.BlockPos;
 import net.minecraft.core.Direction;
 import net.minecraft.server.level.ServerPlayer;
@@ -15,7 +16,6 @@ import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.Item;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.item.context.BlockPlaceContext;
-import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.BaseEntityBlock;
 import net.minecraft.world.level.block.Block;
@@ -27,7 +27,6 @@ import net.minecraft.world.level.block.entity.BlockEntity;
 import net.minecraft.world.level.block.state.BlockState;
 import net.minecraft.world.level.block.state.StateDefinition;
 import net.minecraft.world.level.block.state.properties.BooleanProperty;
-import net.minecraft.world.level.block.state.properties.DirectionProperty;
 import net.minecraft.world.phys.BlockHitResult;
 import org.jetbrains.annotations.Nullable;
 
@@ -37,7 +36,13 @@ public class MusicBoxBlock extends BaseEntityBlock {
     public static final com.mojang.serialization.MapCodec<MusicBoxBlock> CODEC = simpleCodec(MusicBoxBlock::new);
     //?}
 
-    public static final DirectionProperty FACING = HorizontalDirectionalBlock.FACING;
+    //? if >=1.21.2 {
+    /*public static final net.minecraft.world.level.block.state.properties.EnumProperty<Direction> FACING =
+            HorizontalDirectionalBlock.FACING;
+    *///?} else {
+    public static final net.minecraft.world.level.block.state.properties.DirectionProperty FACING =
+            HorizontalDirectionalBlock.FACING;
+    //?}
     public static final BooleanProperty PLAYING = BooleanProperty.create("playing");
 
     public MusicBoxBlock(Properties properties) {
@@ -95,7 +100,13 @@ public class MusicBoxBlock extends BaseEntityBlock {
         return held instanceof SpeakerItem || held instanceof HeadphonesItem;
     }
 
-    //? if >=1.20.5 {
+    //? if >=1.21.2 {
+    /*@Override
+    protected InteractionResult useItemOn(ItemStack stack, BlockState state, Level level, BlockPos pos,
+                                          Player player, InteractionHand hand, BlockHitResult hit) {
+        return isPairable(stack) ? InteractionResult.PASS : InteractionResult.TRY_WITH_EMPTY_HAND;
+    }
+    *///?} else if >=1.20.5 {
     @Override
     protected net.minecraft.world.ItemInteractionResult useItemOn(ItemStack stack, BlockState state, Level level,
                                                                   BlockPos pos, Player player, InteractionHand hand,
@@ -104,7 +115,9 @@ public class MusicBoxBlock extends BaseEntityBlock {
                 ? net.minecraft.world.ItemInteractionResult.SKIP_DEFAULT_BLOCK_INTERACTION
                 : net.minecraft.world.ItemInteractionResult.PASS_TO_DEFAULT_BLOCK_INTERACTION;
     }
+    //?}
 
+    //? if >=1.20.5 {
     @Override
     protected InteractionResult useWithoutItem(BlockState state, Level level, BlockPos pos, Player player,
                                                BlockHitResult hit) {
@@ -129,7 +142,7 @@ public class MusicBoxBlock extends BaseEntityBlock {
                 HeadphoneAccess.announce(player,
                         HeadphoneAccess.togglePairing(player, Levels.dimensionId(level), pos), pos);
             }
-            return InteractionResult.sidedSuccess(level.isClientSide);
+            return Interactions.success(level);
         }
 
         if (!level.isClientSide) {
@@ -138,7 +151,7 @@ public class MusicBoxBlock extends BaseEntityBlock {
                 ModNetwork.openMusicBox(serverPlayer, box, pos);
             }
         }
-        return InteractionResult.sidedSuccess(level.isClientSide);
+        return Interactions.success(level);
     }
 
     @Override
@@ -157,8 +170,15 @@ public class MusicBoxBlock extends BaseEntityBlock {
         return false;
     }
 
-    @Override
-    public boolean propagatesSkylightDown(BlockState state, BlockGetter level, BlockPos pos) {
+    //? if >=1.21.2 {
+    /*@Override
+    protected boolean propagatesSkylightDown(BlockState state) {
         return false;
     }
+    *///?} else {
+    @Override
+    public boolean propagatesSkylightDown(BlockState state, net.minecraft.world.level.BlockGetter level, BlockPos pos) {
+        return false;
+    }
+    //?}
 }

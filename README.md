@@ -3,7 +3,7 @@
 <br />
 # MusicBox Radio
 
-A Minecraft 1.19.2 and 1.21.1 mod that adds a **Music Box** block which streams internet radio stations,
+A Minecraft mod for 1.19.2 through 1.21.3 that adds a **Music Box** block which streams internet radio stations,
 **Speakers** that relay it around a build, and **Headphones** that let you keep listening
 anywhere in the world.
 
@@ -14,21 +14,41 @@ registry namespace, config folder and jar are all named `musicboxradio` to stay 
 | --- | --- | --- |
 | ![Station list](docs/images/gui.jpg) | ![Music Box block](docs/images/block.jpg) | ![Headphones equipped](docs/images/headphones.jpg) |
 
-Ports live under `ports/`, each a standalone Gradle project:
+## Supported versions
 
-| Port | Loader | Build |
-| --- | --- | --- |
-| `ports/1.19.2` | Forge 43.5.2 | `cd ports/1.19.2 && ./gradlew build` |
-| `ports/1.19.2-fabric` | Fabric Loader 0.16.14, Fabric API 0.76.1 | `cd ports/1.19.2-fabric && ./gradlew build` |
-| `ports/1.21.1` | Forge 52.1.16 | `cd ports/1.21.1 && ./gradlew build` |
-| `ports/1.21.1-neoforge` | NeoForge 21.1.200 | `cd ports/1.21.1-neoforge && ./gradlew build` |
+| Minecraft | Loaders |
+| --- | --- |
+| 1.19.2 | Forge, Fabric |
+| 1.20 to 1.20.1 | Forge (also runs on NeoForge 1.20.1), Fabric |
+| 1.20.3 to 1.20.4 | NeoForge, Fabric |
+| 1.20.5 to 1.20.6 | Forge, NeoForge, Fabric |
+| 1.21 to 1.21.1 | Forge, NeoForge, Fabric |
+| 1.21.2 to 1.21.3 | Forge, NeoForge, Fabric |
 
-> NeoForge has no 1.19.2 build - it forked from Forge at 1.20.1 - so there is no NeoForge
-> port at that version.
+Each Minecraft version and loader gets its own jar, named
+`musicboxradio-<minecraft>-<loader>-<version>.jar`.
 
-The 1.19.2 ports need **JDK 17** and the 1.21.1 ports need **JDK 21**. Each `gradle.properties`
-pins `org.gradle.java.home` to a local JDK path; change it to yours, or delete the line if your
-`JAVA_HOME` is already the right version.
+## Building
+
+Every version is built from the one source tree with
+[Stonecutter](https://stonecutter.kikugie.dev/). Code that differs between versions is marked
+inline with `//? if` comments, and loader specific code sits behind the small interface in
+`com.musicbox.platform`, with one implementation per loader.
+
+- Each Minecraft version and loader is a node in `settings.gradle.kts`, with its loader and
+  dependency versions in `stonecutter.properties.toml`.
+- `./gradlew build collectJar` builds every jar into `build/libs/<version>/`.
+- `./gradlew :1.21.1-neoforge:build` builds one, and `:1.21.1-neoforge:runClient` or
+  `runServer` starts it in a dev environment under `run/<node>`.
+- Resources are kept in the 1.21 layout and moved or rewritten for other versions at build
+  time, in `buildSrc/src/main/kotlin/MusicBoxBuild.kt`.
+
+Gradle itself runs on **JDK 25**. Builds also need JDK 17 and 21 installed; Gradle finds them
+through its toolchain support, and Forge 1.20.6 and later also needs a JDK 8 that ForgeGradle
+can find through a `JAVA_HOME_8_X64` style environment variable.
+
+Before committing, run `./gradlew "Reset active project"` so the source is left in the state
+of the default version.
 
 ## How it works in game
 
@@ -46,7 +66,14 @@ Unpaired headphones just follow whichever box is playing nearest to you.
 
 With Curios or Trinkets installed the headphones also go in the head slot, leaving your helmet
 free. The mod asks for that slot itself, so it is there even if nothing else in the pack uses
-one. On 1.21.1 Curios only exists for NeoForge, so the Forge 1.21.1 build is helmet slot only.
+one. Curios only exists for NeoForge from 1.21 on, so the Forge builds for 1.21 and later are
+helmet slot only.
+
+### Who can add stations
+
+Players allowed by the server get a **+** button in the music box panel for adding their own
+station by name and URL. Set `customStations.permission` in `stations.json` to `all` to give it to
+everyone, `ops` for operators only (the default), or `off` to hide it.
 
 ### Pairing headphones to a box
 

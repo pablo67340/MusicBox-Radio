@@ -6,24 +6,27 @@ Prerequisites:
   1. pip install -r requirements.txt          (just `requests`)
   2. An API token from https://authors.curseforge.com/account/api-tokens
      -> put it in the CURSEFORGE_TOKEN environment variable (or --token)
-  3. Jars collected in releases/<mod_version>/. Pass --collect to copy them
-     out of each port's build/libs for you.
+  3. Jars built into build/libs/<mod_version>/ by `gradlew build collectJar`.
+
+Every jar in that folder is uploaded. Which Minecraft versions a jar is tagged
+with comes from stonecutter.properties.toml: the version's mod.mc_releases,
+narrowed to the ones that loader's mod.mc_compat range accepts.
 
 The project ID defaults to MusicBox Radio's own (1661840); pass --project-id
 only if you are uploading somewhere else.
 
 Usage, from the project root:
-  python scripts/upload_curseforge.py --collect --dry-run
-  python scripts/upload_curseforge.py --collect
-  python scripts/upload_curseforge.py --loaders fabric
+  python scripts/upload_curseforge.py --dry-run
+  python scripts/upload_curseforge.py
+  python scripts/upload_curseforge.py --loaders fabric --only 1.21.1
 """
 
 import argparse
 import json
 import os
 import re
-import shutil
 import sys
+import tomllib
 from pathlib import Path
 
 import requests
@@ -38,48 +41,53 @@ MOD_NAME = "MusicBox Radio"
 # shared with the other mod projects and the wrong value uploads to the wrong page.
 DEFAULT_PROJECT_ID = "1661840"
 
-# Minecraft version + loader + Java the jar targets. Client + server for all.
-# `loader` must match the CurseForge Modloader tag name exactly. `dir` is the
-# port directory the jar is built in.
-PORTS = [
-    {"mc": "1.19.2", "loader": "Forge",  "java": "Java 17", "dir": "1.19.2"},
-    {"mc": "1.19.2", "loader": "Fabric", "java": "Java 17", "dir": "1.19.2-fabric"},
-    {"mc": "1.21.1", "loader": "Forge",    "java": "Java 21", "dir": "1.21.1"},
-    {"mc": "1.21.1", "loader": "NeoForge", "java": "Java 21", "dir": "1.21.1-neoforge"},
-]
+LOADER_TAGS = {"forge": "Forge", "neoforge": "NeoForge", "fabric": "Fabric"}
 
 ENV_TAGS = [("environment", "Client"), ("environment", "Server")]
 
-
-def port_key(port: dict) -> str:
-    return f"{port['mc']}-{port['loader'].lower()}"
+JAR_PATTERN = re.compile(rf"^{MOD_ID}-(?P<mc>[\d.]+)-(?P<loader>fabric|forge|neoforge)-(?P<version>.+)\.jar$")
 
 
-def jar_filename(port: dict, mod_version: str) -> str:
-    if port["loader"] == "Forge":
-        return f"{MOD_ID}-{port['mc']}-{mod_version}.jar"
-    return f"{MOD_ID}-{port['mc']}-{port['loader'].lower()}-{mod_version}.jar"
+def version_tuple(version: str) -> tuple:
+    return tuple(int(part) for part in version.split("."))
 
 
-def read_mod_version() -> str:
-    """Each port carries its own gradle.properties; they are kept in step."""
-    properties = PROJECT_ROOT / "ports" / PORTS[0]["dir"] / "gradle.properties"
-    for line in properties.read_text().splitlines():
-        if line.strip().startswith("mod_version="):
-            return line.split("=", 1)[1].strip()
-    sys.exit(f"mod_version not found in {properties}")
+def in_maven_range(version: str, spec: str) -> bool:
+    """Checks a Forge style range such as [1.20,1.20.2)."""
+    match = re.fullmatch(r"([\[(])([^,]*),([^\])]*)([\])])", spec.strip())
+    if not match:
+        sys.exit(f"Cannot read version range {spec!r}")
+    low_inclusive, low, high, high_inclusive = match.groups()
+    v = version_tuple(version)
+    if low:
+        if v < version_tuple(low) or (v == version_tuple(low) and low_inclusive == "("):
+            return False
+    if high:
+        if v > version_tuple(high) or (v == version_tuple(high) and high_inclusive == ")"):
+            return False
+    return True
 
 
-def collect_jars(ports: list, mod_version: str, release_dir: Path) -> None:
-    """Copies freshly built jars out of each port's build/libs."""
-    release_dir.mkdir(parents=True, exist_ok=True)
-    for port in ports:
-        name = jar_filename(port, mod_version)
-        built = PROJECT_ROOT / "ports" / port["dir"] / "build" / "libs" / name
-        if not built.is_file():
-            sys.exit(f"Not built yet: {built}\nRun gradlew build in ports/{port['dir']} first.")
-        shutil.copy2(built, release_dir / name)
-        print(f"  collected {name}")
+def minecraft_versions(config: dict, mc: str, loader: str) -> list:
+    releases = config[mc]["mod"]["mc_releases"]
+    spec = config[loader][mc]["mod"]["mc_compat"]
+    if loader == "fabric":
+        # Fabric ranges are written to cover exactly the listed releases.
+        return releases
+    return [r for r in releases if in_maven_range(r, spec)]
+
+
+def java_tag(mc: str) -> str:
+    v = version_tuple(mc)
+    if v >= (26, 1):
+        return "Java 25"
+    if v >= (1, 20, 5):
+        return "Java 21"
+    if v >= (1, 18):
+        return "Java 17"
+    if v >= (1, 17):
+        return "Java 16"
+    return "Java 8"
 
 
 def fetch_version_ids(token: str) -> dict:
@@ -138,89 +146,84 @@ def main() -> None:
                         help=f"numeric CurseForge project id (default {DEFAULT_PROJECT_ID})")
     parser.add_argument("--token", default=os.environ.get("CURSEFORGE_TOKEN"),
                         help="CurseForge author API token")
-    parser.add_argument("--mod-version", default=None,
-                        help="defaults to mod_version from gradle.properties")
     parser.add_argument("--changelog-file", default=str(PROJECT_ROOT / "CHANGELOG.md"))
     parser.add_argument("--release-type", default="release",
                         choices=["release", "beta", "alpha"])
     parser.add_argument("--only", default=None,
-                        help="comma-separated keys (1.21.1 or 1.21.1-neoforge). Default: all")
+                        help="comma-separated Minecraft versions or version-loader keys "
+                             "(1.21.1 or 1.21.1-neoforge). Default: all")
     parser.add_argument("--loaders", default=None,
                         help="comma-separated loaders to include (forge,fabric,neoforge)")
-    parser.add_argument("--collect", action="store_true",
-                        help="copy jars out of each port's build/libs first")
     parser.add_argument("--dry-run", action="store_true",
                         help="resolve everything and show what would be uploaded")
     args = parser.parse_args()
 
     if not args.token:
         sys.exit("No API token: set CURSEFORGE_TOKEN or pass --token")
-    if not args.project_id and not args.dry_run:
-        sys.exit("No project id: set CURSEFORGE_PROJECT_ID or pass --project-id")
 
-    mod_version = args.mod_version or read_mod_version()
+    with open(PROJECT_ROOT / "stonecutter.properties.toml", "rb") as fh:
+        config = tomllib.load(fh)
+    mod_version = config["mod"]["version"]
     changelog = Path(args.changelog_file).read_text(encoding="utf-8")
     only = {s.strip().lower() for s in args.only.split(",")} if args.only else None
-    loaders = ({s.strip().lower() for s in args.loaders.split(",")}
-               if args.loaders else None)
+    loaders = {s.strip().lower() for s in args.loaders.split(",")} if args.loaders else None
 
-    release_dir = PROJECT_ROOT / "releases" / mod_version
-    ports = []
-    for port in PORTS:
-        if loaders is not None and port["loader"].lower() not in loaders:
+    jar_dir = PROJECT_ROOT / "build" / "libs" / mod_version
+    jars = []
+    for jar in sorted(jar_dir.glob("*.jar"), key=lambda p: (version_tuple(JAR_PATTERN.match(p.name)["mc"]), p.name)
+                      if JAR_PATTERN.match(p.name) else ((0,), p.name)):
+        match = JAR_PATTERN.match(jar.name)
+        if not match or match["version"] != mod_version:
             continue
-        key = port_key(port)
-        if only is not None and port["mc"] not in only and key not in only:
+        mc, loader = match["mc"], match["loader"]
+        if loaders is not None and loader not in loaders:
             continue
-        ports.append(port)
+        if only is not None and mc not in only and f"{mc}-{loader}" not in only:
+            continue
+        jars.append((jar, mc, loader))
 
-    if not ports:
-        sys.exit("No ports matched --only / --loaders")
-
-    if args.collect:
-        print(f"Collecting jars into releases/{mod_version}/")
-        collect_jars(ports, mod_version, release_dir)
-
-    # Verify all jars exist before touching the network
-    for port in ports:
-        port["jar"] = release_dir / jar_filename(port, mod_version)
-        if not port["jar"].is_file():
-            sys.exit(f"Missing jar: {port['jar']}\n"
-                     f"Build and collect the release jars first (--collect).")
+    if not jars:
+        sys.exit(f"No {mod_version} jars matched in {jar_dir}. Run gradlew build collectJar first.")
 
     print("Resolving CurseForge game version IDs...")
     version_ids = fetch_version_ids(args.token)
 
     uploaded = []
-    for port in ports:
-        tags = [("minecraft", port["mc"]),
-                ("java", port["java"]),
-                ("modloader", port["loader"])] + ENV_TAGS
+    for jar, mc, loader in jars:
+        mc_tags = minecraft_versions(config, mc, loader)
+        loader_tags = [LOADER_TAGS[loader]]
+        if loader == "forge" and mc == "1.20.1":
+            # NeoForge for 1.20.1 is still Forge underneath and loads Forge mods.
+            loader_tags.append("NeoForge")
+        tags = ([("minecraft", v) for v in mc_tags]
+                + [("java", java_tag(mc))]
+                + [("modloader", t) for t in loader_tags]
+                + ENV_TAGS)
         game_versions = resolve_tags(tags, version_ids)
         metadata = {
             "changelog": changelog,
             "changelogType": "markdown",
-            "displayName": f"{MOD_NAME} {mod_version} (MC {port['mc']} {port['loader']})",
+            "displayName": f"{MOD_NAME} {mod_version} (MC {mc} {LOADER_TAGS[loader]})",
             "gameVersions": game_versions,
             "releaseType": args.release_type,
         }
-        print(f"\n{port['jar'].name}")
-        print(f"  tags: {', '.join(n for _, n in tags)}  ->  ids {game_versions}")
+        print(f"\n{jar.name}")
+        print(f"  tags: {', '.join(n for _, n in tags)}")
         if args.dry_run:
             continue
 
-        with open(port["jar"], "rb") as fh:
+        with open(jar, "rb") as fh:
             resp = requests.post(
                 f"{UPLOAD_API}/projects/{args.project_id}/upload-file",
                 headers={"X-Api-Token": args.token},
                 data={"metadata": json.dumps(metadata)},
-                files={"file": (port["jar"].name, fh, "application/java-archive")},
+                files={"file": (jar.name, fh, "application/java-archive")},
                 timeout=300,
             )
         if resp.status_code != 200:
             sys.exit(f"  UPLOAD FAILED ({resp.status_code}): {resp.text}")
         file_id = resp.json()["id"]
-        uploaded.append((port_key(port), file_id))
+        uploaded.append((jar.name, file_id))
         print(f"  uploaded -> file id {file_id}")
 
     if args.dry_run:

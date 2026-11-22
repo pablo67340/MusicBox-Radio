@@ -1,5 +1,46 @@
 # Changelog
 
+## 1.3.0
+
+### Many more Minecraft versions
+
+MusicBox Radio now ships for:
+
+| Minecraft | Loaders |
+| --- | --- |
+| 1.19.2 | Forge, Fabric |
+| 1.20 to 1.20.1 | Forge (also runs on NeoForge 1.20.1), Fabric |
+| 1.20.3 to 1.20.4 | NeoForge, Fabric |
+| 1.20.5 to 1.20.6 | Forge, NeoForge, Fabric |
+| 1.21 to 1.21.1 | Forge, NeoForge, Fabric |
+| 1.21.2 to 1.21.3 | Forge, NeoForge, Fabric |
+
+Each Minecraft version and loader still has its own jar, because the game changes
+too much between versions for one file to run on all of them. Pick the file that
+matches your game and loader.
+
+Forge for 1.20.2 to 1.20.4 is not included. Those Forge versions are rarely used,
+and NeoForge covers 1.20.4.
+
+### Letting everyone add stations
+
+The + button in the music box panel is shown to whoever the server allows. To let
+every player add stations, set `"permission": "all"` under `customStations` in
+`config/musicboxradio/stations.json`. The default is still `ops`.
+
+### Fixes
+
+- Breaking a speaker on 1.19.2 now drops it. It had no loot table and dropped
+  nothing.
+- On Fabric, headphone pairing state is now reset when a player logs in, as it
+  already was on Forge, so a stale pairing from a previous session cannot linger.
+
+### Headphones on 1.21.2 and later
+
+From 1.21.2 the headphones are a wearable head item rather than armor, which is
+how that version handles cosmetic headwear. They look and behave the same: they
+sit in the helmet slot, give no protection, never break and cannot be enchanted.
+
 ## 1.2.1
 
 ### Now on Minecraft 1.21.1, for Forge and NeoForge

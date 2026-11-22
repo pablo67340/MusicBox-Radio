@@ -9,7 +9,6 @@ import com.musicbox.registry.ModBlockEntities;
 import com.musicbox.registry.ModMenus;
 import net.neoforged.bus.api.IEventBus;
 import net.neoforged.fml.event.lifecycle.FMLClientSetupEvent;
-import net.neoforged.neoforge.client.event.ClientTickEvent;
 import net.neoforged.neoforge.client.event.EntityRenderersEvent;
 import net.neoforged.neoforge.client.event.RegisterMenuScreensEvent;
 import net.neoforged.neoforge.common.NeoForge;
@@ -29,6 +28,15 @@ final class NeoForgeClient {
             event.registerBlockEntityRenderer(ModBlockEntities.MUSIC_BOX.get(), MusicBoxRenderer::new);
             event.registerBlockEntityRenderer(ModBlockEntities.SPEAKER.get(), SpeakerRenderer::new);
         });
-        NeoForge.EVENT_BUS.addListener(ClientTickEvent.Post.class, event -> ClientSetup.tick());
+        //? if >=1.20.5 {
+        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.client.event.ClientTickEvent.Post.class,
+                event -> ClientSetup.tick());
+        //?} else {
+        /*NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.TickEvent.ClientTickEvent.class, event -> {
+            if (event.phase == net.neoforged.neoforge.event.TickEvent.Phase.END) {
+                ClientSetup.tick();
+            }
+        });
+        *///?}
     }
 }

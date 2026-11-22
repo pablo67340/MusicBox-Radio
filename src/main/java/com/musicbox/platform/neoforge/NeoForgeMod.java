@@ -9,7 +9,6 @@ import net.neoforged.fml.loading.FMLEnvironment;
 import net.neoforged.neoforge.common.NeoForge;
 import net.neoforged.neoforge.event.entity.player.PlayerEvent;
 import net.neoforged.neoforge.event.server.ServerStoppedEvent;
-import net.neoforged.neoforge.event.tick.ServerTickEvent;
 
 @Mod(MusicBox.MOD_ID)
 public final class NeoForgeMod {
@@ -18,8 +17,16 @@ public final class NeoForgeMod {
         MusicBox.init();
         ((NeoForgePlatform) Services.PLATFORM).attach(modBus);
 
-        NeoForge.EVENT_BUS.addListener(ServerTickEvent.Post.class,
+        //? if >=1.20.5 {
+        NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.tick.ServerTickEvent.Post.class,
                 event -> ServerEvents.onServerTick(event.getServer()));
+        //?} else {
+        /*NeoForge.EVENT_BUS.addListener(net.neoforged.neoforge.event.TickEvent.ServerTickEvent.class, event -> {
+            if (event.phase == net.neoforged.neoforge.event.TickEvent.Phase.END) {
+                ServerEvents.onServerTick(net.neoforged.neoforge.server.ServerLifecycleHooks.getCurrentServer());
+            }
+        });
+        *///?}
         NeoForge.EVENT_BUS.addListener(PlayerEvent.PlayerLoggedInEvent.class,
                 event -> ServerEvents.onLogin(event.getEntity().getUUID()));
         NeoForge.EVENT_BUS.addListener(ServerStoppedEvent.class, event -> ServerEvents.onServerStopped());

@@ -34,9 +34,14 @@ public final class FabricClient implements ClientModInitializer {
     }
 
     private static <P> void listen(FabricPlatform.Channel<P> channel) {
-        ClientPlayNetworking.registerGlobalReceiver(channel.id, (client, listener, buf, responder) -> {
+        //? if >=1.20.5 {
+        ClientPlayNetworking.registerGlobalReceiver(channel.type,
+                (packet, context) -> channel.clientHandler.accept(packet.payload()));
+        //?} else {
+        /*ClientPlayNetworking.registerGlobalReceiver(channel.id, (client, listener, buf, responder) -> {
             P payload = channel.reader.apply(buf);
             client.execute(() -> channel.clientHandler.accept(payload));
         });
+        *///?}
     }
 }

@@ -27,10 +27,61 @@ mod.mc_compat = "[1.19.2,1.19.3)"
 deps.forge = "43.5.2"
 deps.forge_range = "[43,)"
 
+["1.20.1"]
+mod.mc_releases = ["1.20", "1.20.1"]
+res.era = "1.20"
+pack.format = "15"
+
+[fabric."1.20.1"]
+mod.mc_compat = ">=1.20 <1.20.2"
+deps.fabric_api = "0.92.12+1.20.1"
+
+[forge."1.20.1"]
+mod.mc_compat = "[1.20,1.20.2)"
+deps.forge = "47.4.29"
+deps.forge_range = "[46,)"
+
+["1.20.4"]
+mod.mc_releases = ["1.20.3", "1.20.4"]
+res.era = "1.20"
+pack.format = "26"
+
+[fabric."1.20.4"]
+mod.mc_compat = ">=1.20.3 <1.20.5"
+deps.fabric_api = "0.97.3+1.20.4"
+
+[neoforge."1.20.4"]
+mod.mc_compat = "[1.20.4,1.20.5)"
+deps.neoforge = "20.4.253"
+deps.neoforge_range = "[20.4,)"
+
+["1.20.6"]
+mod.mc_releases = ["1.20.5", "1.20.6"]
+res.era = "1.20"
+pack.format = "41"
+
+[fabric."1.20.6"]
+mod.mc_compat = ">=1.20.5 <1.21"
+deps.fabric_api = "0.100.8+1.20.6"
+
+[forge."1.20.6"]
+mod.mc_compat = "[1.20.6,1.21)"
+deps.forge = "50.2.15"
+deps.forge_range = "[50,)"
+
+[neoforge."1.20.6"]
+mod.mc_compat = "[1.20.6,1.21)"
+deps.neoforge = "20.6.144"
+deps.neoforge_range = "[20.6,)"
+
 ["1.21.1"]
 mod.mc_releases = ["1.21", "1.21.1"]
 res.era = "1.21"
 pack.format = "34"
+
+[fabric."1.21.1"]
+mod.mc_compat = ">=1.21 <1.21.2"
+deps.fabric_api = "0.116.18+1.21.1"
 
 [forge."1.21.1"]
 mod.mc_compat = "[1.21.1,1.21.2)"

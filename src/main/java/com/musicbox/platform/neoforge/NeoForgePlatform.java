@@ -7,9 +7,9 @@ import com.musicbox.registry.Keys;
 import net.minecraft.core.Holder;
 import net.minecraft.core.Registry;
 import net.minecraft.network.FriendlyByteBuf;
-import net.minecraft.network.codec.StreamCodec;
 import net.minecraft.network.protocol.common.custom.CustomPacketPayload;
 import net.minecraft.resources.ResourceKey;
+import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.MenuProvider;
 import net.minecraft.world.inventory.AbstractContainerMenu;
@@ -20,8 +20,6 @@ import net.neoforged.fml.ModList;
 import net.neoforged.fml.loading.FMLPaths;
 import net.neoforged.neoforge.common.extensions.IMenuTypeExtension;
 import net.neoforged.neoforge.network.PacketDistributor;
-import net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent;
-import net.neoforged.neoforge.network.registration.PayloadRegistrar;
 import net.neoforged.neoforge.registries.DeferredHolder;
 import net.neoforged.neoforge.registries.DeferredRegister;
 
@@ -47,7 +45,18 @@ public final class NeoForgePlatform implements Platform {
     /** Hands the queued registrations and packets to the mod bus; called once from the entry point. */
     void attach(IEventBus modBus) {
         registers.values().forEach(register -> register.register(modBus));
-        modBus.addListener(RegisterPayloadHandlersEvent.class, this::registerPayloads);
+        //? if >=1.20.5 {
+        modBus.addListener(net.neoforged.neoforge.network.event.RegisterPayloadHandlersEvent.class, event -> {
+            net.neoforged.neoforge.network.registration.PayloadRegistrar registrar = event.registrar(PROTOCOL);
+            channels.forEach(channel -> channel.register(registrar));
+        });
+        //?} else {
+        /*modBus.addListener(net.neoforged.neoforge.network.event.RegisterPayloadHandlerEvent.class, event -> {
+            net.neoforged.neoforge.network.registration.IPayloadRegistrar registrar =
+                    event.registrar(MusicBox.MOD_ID).versioned(PROTOCOL);
+            channels.forEach(channel -> channel.register(registrar));
+        });
+        *///?}
     }
 
     @Override
@@ -97,13 +106,13 @@ public final class NeoForgePlatform implements Platform {
     @Override
     public <P> void registerClientbound(String name, Class<P> type, BiConsumer<P, FriendlyByteBuf> writer,
                                         Function<FriendlyByteBuf, P> reader, Consumer<P> handler) {
-        add(new Channel<>(name, writer, reader, handler, null), type);
+        add(new Channel<>(MusicBox.id(name), writer, reader, handler, null), type);
     }
 
     @Override
     public <P> void registerServerbound(String name, Class<P> type, BiConsumer<P, FriendlyByteBuf> writer,
                                         Function<FriendlyByteBuf, P> reader, BiConsumer<P, ServerPlayer> handler) {
-        add(new Channel<>(name, writer, reader, null, handler), type);
+        add(new Channel<>(MusicBox.id(name), writer, reader, null, handler), type);
     }
 
     private void add(Channel<?> channel, Class<?> type) {
@@ -113,12 +122,20 @@ public final class NeoForgePlatform implements Platform {
 
     @Override
     public void sendToPlayer(ServerPlayer player, Object payload) {
+        //? if >=1.20.5 {
         PacketDistributor.sendToPlayer(player, wrap(payload));
+        //?} else {
+        /*PacketDistributor.PLAYER.with(player).send(wrap(payload));
+        *///?}
     }
 
     @Override
     public void sendToServer(Object payload) {
+        //? if >=1.20.5 {
         PacketDistributor.sendToServer(wrap(payload));
+        //?} else {
+        /*PacketDistributor.SERVER.noArg().send(wrap(payload));
+        *///?}
     }
 
     @SuppressWarnings("unchecked")
@@ -130,29 +147,35 @@ public final class NeoForgePlatform implements Platform {
         return new Packet<>(channel, payload);
     }
 
-    private void registerPayloads(RegisterPayloadHandlersEvent event) {
-        PayloadRegistrar registrar = event.registrar(PROTOCOL);
-        channels.forEach(channel -> channel.register(registrar));
-    }
-
     /** One packet type; the payload itself stays a plain record with its own read and write. */
     private static final class Channel<P> {
 
-        final CustomPacketPayload.Type<Packet<P>> type;
-        final StreamCodec<FriendlyByteBuf, Packet<P>> codec;
+        final ResourceLocation id;
+        final BiConsumer<P, FriendlyByteBuf> writer;
+        final Function<FriendlyByteBuf, P> reader;
         final Consumer<P> clientHandler;
         final BiConsumer<P, ServerPlayer> serverHandler;
+        //? if >=1.20.5 {
+        final CustomPacketPayload.Type<Packet<P>> type;
+        final net.minecraft.network.codec.StreamCodec<FriendlyByteBuf, Packet<P>> codec;
+        //?}
 
-        Channel(String name, BiConsumer<P, FriendlyByteBuf> writer, Function<FriendlyByteBuf, P> reader,
+        Channel(ResourceLocation id, BiConsumer<P, FriendlyByteBuf> writer, Function<FriendlyByteBuf, P> reader,
                 Consumer<P> clientHandler, BiConsumer<P, ServerPlayer> serverHandler) {
-            this.type = new CustomPacketPayload.Type<>(MusicBox.id(name));
-            this.codec = StreamCodec.of((buf, packet) -> writer.accept(packet.payload(), buf),
-                    buf -> new Packet<>(this, reader.apply(buf)));
+            this.id = id;
+            this.writer = writer;
+            this.reader = reader;
             this.clientHandler = clientHandler;
             this.serverHandler = serverHandler;
+            //? if >=1.20.5 {
+            this.type = new CustomPacketPayload.Type<>(id);
+            this.codec = net.minecraft.network.codec.StreamCodec.of((buf, packet) -> writer.accept(packet.payload(), buf),
+                    buf -> new Packet<>(this, reader.apply(buf)));
+            //?}
         }
 
-        void register(PayloadRegistrar registrar) {
+        //? if >=1.20.5 {
+        void register(net.neoforged.neoforge.network.registration.PayloadRegistrar registrar) {
             if (clientHandler != null) {
                 registrar.playToClient(type, codec,
                         (packet, context) -> context.enqueueWork(() -> clientHandler.accept(packet.payload())));
@@ -164,12 +187,40 @@ public final class NeoForgePlatform implements Platform {
                 }));
             }
         }
+        //?} else {
+        /*void register(net.neoforged.neoforge.network.registration.IPayloadRegistrar registrar) {
+            FriendlyByteBuf.Reader<Packet<P>> read = buf -> new Packet<>(this, reader.apply(buf));
+            if (clientHandler != null) {
+                registrar.play(id, read, handlers -> handlers.client((packet, context) ->
+                        context.workHandler().execute(() -> clientHandler.accept(packet.payload()))));
+            } else {
+                registrar.play(id, read, handlers -> handlers.server((packet, context) ->
+                        context.workHandler().execute(() -> context.player().ifPresent(player -> {
+                            if (player instanceof ServerPlayer sender) {
+                                serverHandler.accept(packet.payload(), sender);
+                            }
+                        }))));
+            }
+        }
+        *///?}
     }
 
     private record Packet<P>(Channel<P> channel, P payload) implements CustomPacketPayload {
+        //? if >=1.20.5 {
         @Override
         public Type<? extends CustomPacketPayload> type() {
             return channel.type;
         }
+        //?} else {
+        /*@Override
+        public void write(FriendlyByteBuf buf) {
+            channel.writer.accept(payload, buf);
+        }
+
+        @Override
+        public ResourceLocation id() {
+            return channel.id;
+        }
+        *///?}
     }
 }

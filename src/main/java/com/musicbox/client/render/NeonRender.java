@@ -86,7 +86,15 @@ public final class NeonRender {
                 .setOverlay(OverlayTexture.NO_OVERLAY)
                 .setLight(FULL_BRIGHT)
                 .setNormal(pose, 0.0F, 0.0F, 1.0F);
-        //?} else {
+        //?} else if >=1.20.5 {
+        /*buffer.vertex(pose.pose(), x, y, 0.0F)
+                .color(red, green, blue, alpha)
+                .uv(u, v)
+                .overlayCoords(OverlayTexture.NO_OVERLAY)
+                .uv2(FULL_BRIGHT)
+                .normal(pose, 0.0F, 0.0F, 1.0F)
+                .endVertex();
+        *///?} else {
         /*buffer.vertex(pose.pose(), x, y, 0.0F)
                 .color(red, green, blue, alpha)
                 .uv(u, v)

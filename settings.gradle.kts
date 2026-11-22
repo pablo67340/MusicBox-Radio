@@ -20,8 +20,10 @@ stonecutter {
     create(rootProject) {
         /**
          * One node per Minecraft version and loader, in `versions/{version}-{loader}`.
-         * Forge uses ModDevGradle's legacy plugin up to 1.20.1, where Forge still shipped
-         * SRG names, and ForgeGradle 7 from 1.20.2 on.
+         * Forge uses ModDevGradle's legacy plugin up to 1.20.1, where Forge still ran on
+         * SRG names and jars must be reobfuscated, and ForgeGradle 7 from 1.20.6 on.
+         * Forge 1.20.2 to 1.20.4 also ran on SRG names, but neither plugin can reobfuscate
+         * for it, so that range is left to NeoForge.
          */
         fun node(version: String, vararg loaders: String) {
             for (loader in loaders) {
@@ -34,7 +36,10 @@ stonecutter {
         }
 
         node("1.19.2", "fabric", "forge")
-        node("1.21.1", "forge", "neoforge")
+        node("1.20.1", "fabric", "forge")
+        node("1.20.4", "fabric", "neoforge")
+        node("1.20.6", "fabric", "forge", "neoforge")
+        node("1.21.1", "fabric", "forge", "neoforge")
         vcsVersion = "1.21.1-neoforge"
     }
 }

@@ -1,0 +1,30 @@
+{
+  "schemaVersion": 1,
+  "id": "${mod_id}",
+  "version": "${mod_version}",
+  "name": "${mod_name}",
+  "description": "${mod_description_json}",
+  "authors": [
+    "${mod_authors}"
+  ],
+  "license": "${mod_license}",
+  "icon": "musicboxradio_icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "main": [
+      "com.musicbox.platform.fabric.FabricMain"
+    ],
+    "client": [
+      "com.musicbox.platform.fabric.FabricClient"
+    ]
+  },
+  "depends": {
+    "fabricloader": "${loader_range}",
+    "minecraft": "${minecraft_range}",
+    "java": ">=${java}",
+    "fabric-api": "*"
+  },
+  "suggests": {
+    "trinkets": "*"
+  }
+}
